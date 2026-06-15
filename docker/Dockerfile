@@ -29,6 +29,8 @@ COPY . .
 
 # ─── Web Builder ───────────────────────────────────────────────────────────
 FROM builder AS web-builder
+ARG NEXT_PUBLIC_API_URL=https://api.cruxsee.in
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN pnpm turbo build --filter=web
 
 # ─── API Builder ───────────────────────────────────────────────────────────
