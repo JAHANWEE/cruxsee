@@ -1,0 +1,14 @@
+# Cruxsee — Caddy reverse proxy
+# Handles auto-SSL via Let's Encrypt
+
+home.cruxsee.in {
+	reverse_proxy web:3000
+}
+
+chat.cruxsee.in {
+	reverse_proxy web:3000
+}
+
+api.cruxsee.in {
+	reverse_proxy api:4000
+}
