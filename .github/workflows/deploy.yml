@@ -53,6 +53,17 @@ jobs:
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
+      - name: Build and push Migrator image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: migrator
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}:migrator-latest
+          cache-from: type=gha,scope=migrator
+          cache-to: type=gha,mode=max,scope=migrator
+
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push

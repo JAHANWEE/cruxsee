@@ -67,3 +67,9 @@ EXPOSE 4000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
   CMD curl -f http://localhost:4000/health || exit 1
 CMD ["node", "dist/index.js"]
+
+# ─── Migrator ─────────────────────────────────────────────────────────────
+FROM builder AS migrator
+RUN apk add --no-cache postgresql-client
+WORKDIR /app
+CMD ["sh", "-c", "cd packages/auth && pnpm migrate && cd ../database && pnpm db:migrate && cd ../corsair && psql $DATABASE_URL -f migration.sql"]
