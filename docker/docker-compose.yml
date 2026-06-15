@@ -40,7 +40,7 @@ services:
       - PORT=4000
       - BASE_URL=https://api.cruxsee.in
       - BETTER_AUTH_URL=https://api.cruxsee.in
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-cruxsee}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cruxsee}
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
@@ -62,7 +62,10 @@ services:
   migrator:
     image: ghcr.io/${GITHUB_REPO}:migrator-latest
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-cruxsee}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cruxsee}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     depends_on:
       postgres:
         condition: service_healthy

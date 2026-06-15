@@ -8,7 +8,7 @@
   },
   "scripts": {
     "generate": "npx @better-auth/cli generate --config ./src/index.ts",
-    "migrate": "npx @better-auth/cli migrate --config ./src/index.ts"
+    "migrate": "npx @better-auth/cli migrate --yes --config ./src/index.ts"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
