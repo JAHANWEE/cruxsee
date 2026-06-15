@@ -9,6 +9,8 @@ FROM base AS deps
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/package.json ./apps/web/package.json
+COPY packages/auth/package.json ./packages/auth/package.json
+COPY packages/corsair/package.json ./packages/corsair/package.json
 COPY packages/database/package.json ./packages/database/package.json
 COPY packages/trpc/package.json ./packages/trpc/package.json
 COPY packages/services/package.json ./packages/services/package.json

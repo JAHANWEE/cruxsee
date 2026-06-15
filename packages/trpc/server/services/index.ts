@@ -1,3 +1,1 @@
-import UserService from "@repo/services/user";
-
-export const userService = new UserService();
+// Services will be registered here as needed

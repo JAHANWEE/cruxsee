@@ -1,0 +1,21 @@
+{
+  "name": "@repo/auth",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "generate": "npx @better-auth/cli generate --config ./src/index.ts",
+    "migrate": "npx @better-auth/cli migrate --config ./src/index.ts"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "better-auth": "^1.2.0",
+    "pg": "^8.16.3"
+  }
+}

@@ -43,11 +43,6 @@ yarn-error.log*
 # MD
 *.md
 !README.md
-!KNOWLEDGE.md
-!PLAN.md
-!INSTRUCTIONS_FOR_USER.md
-!AGENTS.md
-!RULES.md
 
 # Docker env (keep .env.example)
 docker/.env

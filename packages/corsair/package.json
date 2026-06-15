@@ -1,0 +1,19 @@
+{
+  "name": "@repo/corsair",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "corsair": "^0.1.0",
+    "@corsair-dev/gmail": "^0.1.0",
+    "@corsair-dev/googlecalendar": "^0.1.0",
+    "@corsair-dev/mcp": "^0.1.0",
+    "pg": "^8.16.3"
+  }
+}
