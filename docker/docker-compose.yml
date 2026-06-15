@@ -40,6 +40,10 @@ services:
       - PORT=4000
       - BASE_URL=https://api.cruxsee.in
       - DATABASE_URL=${DATABASE_URL}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - CORSAIR_KEK=${CORSAIR_KEK}
     expose:
       - "4000"
     depends_on:
