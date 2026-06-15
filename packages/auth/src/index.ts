@@ -16,6 +16,8 @@ export const auth = betterAuth({
   },
   trustedOrigins: [
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    "https://home.cruxsee.in",
+    "https://chat.cruxsee.in"
   ],
 });
 
