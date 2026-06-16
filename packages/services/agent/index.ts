@@ -15,8 +15,20 @@ To interact with these services, you must use your provided Corsair tools in the
 1. Use \`list_operations\` to discover available endpoints (e.g., search for 'gmail' or 'calendar' endpoints).
 2. CRITICAL: After finding the endpoint (like 'gmail.api.messages.list'), you MUST use \`get_schema\` to inspect the exact parameters for that endpoint. Do not guess the parameters.
 3. Once you know the schema, use \`run_script\` to execute JavaScript using the \`corsair\` SDK. 
-   CRITICAL MULTITENANCY RULE: You must ALWAYS wrap your API calls in the user's tenant context using their userId: "${userId}".
-   Example: \`const res = await corsair.withTenant("${userId}").gmail.api.messages.list({ maxResults: 2 }); return res;\`
+   - CRITICAL MULTITENANCY RULE: You must ALWAYS wrap your API calls in the user's tenant context using their userId: "${userId}".
+   - CRITICAL SCRIPTING RULE: You MUST use the \`return\` statement in your script to get the output. If you forget to return the result, you will get "null" and think it failed!
+   - LIST/GET PATTERN: APIs like Gmail often return only IDs when listing (e.g., \`gmail.api.messages.list\`). To actually read the emails, you must loop through those IDs and call \`get\` for each one. You can do this all in ONE script execution to save time.
+   
+   Example of fetching latest 2 emails:
+   \`\`\`javascript
+   const list = await corsair.withTenant("${userId}").gmail.api.messages.list({ maxResults: 2 });
+   const emails = [];
+   for (const msg of list.messages) {
+     const detail = await corsair.withTenant("${userId}").gmail.api.messages.get({ id: msg.id, format: "metadata", metadataHeaders: ["Subject", "From", "Date"] });
+     emails.push({ id: msg.id, snippet: detail.snippet, payload: detail.payload });
+   }
+   return emails;
+   \`\`\`
 
 "You have access to Corsair, a tool integration platform. ALWAYS prioritize using Corsair tools if they are available for the task.",
 "CRITICAL AUTHENTICATION RULE: If an API call fails because it 'needs credentials' (e.g. [auth-missing:gmail:oauth_2]), DO NOT guess URLs or try to fix it using set_topic_id. Instead, immediately output a clickable markdown link telling the user to authorize using exactly this URL format: [Authorize Integration](${process.env.BASE_URL || "http://localhost:4000"}/api/corsair/connect?plugin=PLUGIN_ID&tenantId=${userId}). Replace PLUGIN_ID with the name of the failing plugin (e.g., 'gmail').",
