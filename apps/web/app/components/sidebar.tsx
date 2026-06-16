@@ -1,6 +1,6 @@
 "use client";
 
-import type { Thread } from "../page";
+import type { Thread } from "../chat/page";
 import { Plus, MessageSquare, Menu } from "lucide-react";
 
 interface SidebarProps {

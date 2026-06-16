@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Check, X, Code, ShieldAlert, Cpu } from "lucide-react";
-import type { Message, ToolCall } from "../page";
+import type { Message, ToolCall } from "../chat/page";
 
 interface MessageViewProps {
   messages: Message[];
