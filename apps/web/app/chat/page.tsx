@@ -60,13 +60,11 @@ export default function ChatPage() {
 
   const userId = session?.user?.id;
 
-  // Load threads
   useEffect(() => {
     if (!userId) return;
     trpcQuery("thread.list", { userId }).then(setThreads);
   }, [userId]);
 
-  // Load messages + tool calls when thread changes
   useEffect(() => {
     if (!activeThreadId) {
       setMessages([]);
@@ -89,7 +87,6 @@ export default function ChatPage() {
   async function handleSend(content: string) {
     if (!activeThreadId || !content.trim()) return;
 
-    // Optimistic user message
     const optimistic: Message = {
       id: crypto.randomUUID(),
       role: "user",
@@ -105,7 +102,6 @@ export default function ChatPage() {
 
     if (result?.type === "tool_calls") {
       setAgentStatus("Waiting for approval...");
-      // Refresh messages and tool calls
       const [msgs, tcs] = await Promise.all([
         trpcQuery("thread.messages", { threadId: activeThreadId }),
         trpcQuery("thread.toolCalls", { threadId: activeThreadId }),
@@ -122,7 +118,6 @@ export default function ChatPage() {
     setLoading(false);
     setAgentStatus("");
 
-    // Refresh thread list (title might have updated)
     if (userId) {
       trpcQuery("thread.list", { userId }).then(setThreads);
     }
@@ -130,11 +125,10 @@ export default function ChatPage() {
 
   async function handleApprove(toolCallId: string) {
     setLoading(true);
-    setAgentStatus("Executing tool...");
+    setAgentStatus("Executing action...");
 
     const result = await trpcMutate("agent.approveToolCall", { toolCallId });
 
-    // Refresh
     if (activeThreadId) {
       const [msgs, tcs] = await Promise.all([
         trpcQuery("thread.messages", { threadId: activeThreadId }),
@@ -165,35 +159,38 @@ export default function ChatPage() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#09090b]">
+        <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <h1 className="text-2xl font-semibold">Cruxsee</h1>
-          <p className="text-muted-foreground">Sign in to access the workspace.</p>
-          <a href="/" className="text-sm underline">Go to sign in</a>
+      <div className="min-h-screen flex items-center justify-center bg-[#09090b] text-white">
+        <div className="text-center space-y-6">
+          <h1 className="text-4xl font-light tracking-tight">Cruxsee</h1>
+          <p className="text-zinc-400">Sign in to access your workspace.</p>
+          <a href="/" className="inline-block px-6 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-zinc-200 transition-colors">Sign In</a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex">
+    <div className="h-screen flex bg-[#09090b] text-zinc-100 font-sans selection:bg-white/20">
       <Sidebar
         threads={threads}
         activeThreadId={activeThreadId}
         onSelectThread={setActiveThreadId}
         onNewThread={handleNewThread}
       />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative h-full">
+        {/* Subtle background glow effect */}
+        <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
+        
         {activeThreadId ? (
-          <>
+          <div className="flex-1 flex flex-col w-full max-w-4xl mx-auto h-full relative z-10">
             <MessageView
               messages={messages}
               toolCalls={toolCalls}
@@ -203,16 +200,24 @@ export default function ChatPage() {
               agentStatus={agentStatus}
             />
             <Composer onSend={handleSend} disabled={loading} />
-          </>
+          </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <p className="text-muted-foreground text-lg">Start a new conversation</p>
+          <div className="flex-1 flex items-center justify-center z-10">
+            <div className="text-center space-y-6">
+              <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl ring-1 ring-white/10">
+                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-medium tracking-tight">Ready to assist</h2>
+              <p className="text-zinc-400 text-sm max-w-sm mx-auto leading-relaxed">
+                Start a new conversation to begin managing your workflow at inhumane speed.
+              </p>
               <button
                 onClick={handleNewThread}
-                className="px-4 py-2 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-md text-sm"
+                className="mt-4 px-6 py-2.5 bg-white text-black hover:bg-zinc-200 rounded-full text-sm font-medium transition-all shadow-lg shadow-white/5 hover:scale-105 active:scale-95"
               >
-                New Thread
+                Start New Thread
               </button>
             </div>
           </div>

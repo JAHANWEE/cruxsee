@@ -3,17 +3,8 @@
 import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Bot, User } from "lucide-react";
+import { Check, X, ShieldAlert } from "lucide-react";
 import type { Message, ToolCall } from "../page";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "~/components/ui/dialog";
 
 interface MessageViewProps {
   messages: Message[];
@@ -33,83 +24,82 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, loading,
 
   const pendingToolCalls = toolCalls.filter((tc) => tc.status === "waiting_confirmation");
   const hasPendingTools = pendingToolCalls.length > 0;
-  // We can just show the first pending tool call in the modal to process them one by one.
   const activeToolCall = pendingToolCalls[0];
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-8 pb-4 space-y-8 scrollbar-hide relative">
       {messages.map((msg) => (
         <MessageBubble key={msg.id} message={msg} />
       ))}
 
       {loading && agentStatus && (
-        <div className="flex items-center gap-2 px-4 py-2">
-          <div className="w-2 h-2 bg-zinc-400 rounded-full animate-pulse" />
-          <span className="text-sm text-muted-foreground">{agentStatus}</span>
+        <div className="flex items-center gap-3 px-4 py-2 opacity-70">
+          <div className="flex gap-1">
+            <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
+          <span className="text-xs font-medium tracking-wide text-zinc-400 uppercase">{agentStatus}</span>
         </div>
       )}
 
-      <div ref={bottomRef} />
+      <div ref={bottomRef} className="h-4" />
 
-      {/* Tool Approval Modal */}
-      <Dialog open={hasPendingTools}>
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>Action Required</DialogTitle>
-            <DialogDescription>
-              The agent wants to execute a tool on your behalf. Please review the details below.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {activeToolCall && (
-            <div className="space-y-4 my-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-amber-400 rounded-full" />
-                <span className="text-sm font-medium">Tool: {activeToolCall.toolName}</span>
+      {/* Premium Tool Approval Modal */}
+      {hasPendingTools && activeToolCall && (
+        <div className="absolute bottom-4 left-4 right-4 md:left-8 md:right-8 z-50">
+          <div className="bg-[#18181b]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl ring-1 ring-black/50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 ring-1 ring-amber-500/20">
+                  <ShieldAlert className="w-5 h-5 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-white">Action Required</h3>
+                  <p className="text-sm text-zinc-400">Agent wants to execute <span className="text-zinc-200 font-mono text-xs px-1 py-0.5 bg-white/5 rounded">{activeToolCall.toolName}</span></p>
+                </div>
               </div>
-              <div className="bg-zinc-100 dark:bg-zinc-900 rounded-md p-3 max-h-60 overflow-y-auto">
-                <pre className="text-xs">
-                  {JSON.stringify(activeToolCall.input, null, 2)}
-                </pre>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onReject(activeToolCall.id)}
+                  className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+                  title="Reject"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => onApprove(activeToolCall.id)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-black hover:bg-zinc-200 font-medium text-sm rounded-full transition-all shadow-lg shadow-white/5 hover:scale-105 active:scale-95"
+                >
+                  <Check className="w-4 h-4" />
+                  Approve
+                </button>
               </div>
             </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <button
-              onClick={() => activeToolCall && onReject(activeToolCall.id)}
-              className="px-4 py-2 text-sm font-medium bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-            >
-              Reject
-            </button>
-            <button
-              onClick={() => activeToolCall && onApprove(activeToolCall.id)}
-              className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-            >
-              Approve Action
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            
+            <div className="mt-4 bg-black/40 rounded-xl p-4 overflow-x-auto ring-1 ring-white/5">
+              <pre className="text-xs text-zinc-300 font-mono leading-relaxed">
+                {JSON.stringify(activeToolCall.input, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function MessageBubble({ message }: { message: Message }) {
-  if (message.role === "tool") {
-    return null; // Hide raw tool results from the user
-  }
-
-  if (message.role === "assistant" && !message.content) {
-    return null; // Hide empty assistant messages (tool call wrappers)
+  if (message.role === "tool" || (message.role === "assistant" && !message.content)) {
+    return null;
   }
 
   const isUser = message.role === "user";
 
   if (isUser) {
     return (
-      <div className="flex justify-end my-6">
-        <div className="max-w-[75%] px-5 py-3 rounded-3xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-[15px]">
+      <div className="flex justify-end w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="max-w-[80%] md:max-w-[70%] px-5 py-3.5 rounded-3xl rounded-tr-sm bg-[#27272a] text-zinc-100 text-[15px] leading-relaxed shadow-sm ring-1 ring-white/5">
           {message.content}
         </div>
       </div>
@@ -117,11 +107,13 @@ function MessageBubble({ message }: { message: Message }) {
   }
 
   return (
-    <div className="flex items-start gap-4 my-6">
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center">
-        <Bot className="w-5 h-5" />
+    <div className="flex items-start gap-4 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
+        <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
       </div>
-      <div className="flex-1 min-w-0 prose prose-zinc dark:prose-invert max-w-none text-[15px] leading-relaxed">
+      <div className="flex-1 min-w-0 prose prose-invert prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:ring-1 prose-pre:ring-white/10 prose-pre:rounded-xl max-w-none text-[15px] text-zinc-200 pt-1.5">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {message.content || ""}
         </ReactMarkdown>
