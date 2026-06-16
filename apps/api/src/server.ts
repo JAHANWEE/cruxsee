@@ -24,7 +24,7 @@ const openApiDocument = generateOpenApiDocument(serverRouter, {
 app.use(
   cors({
     origin: env.NODE_ENV === "prod"
-      ? [env.FRONTEND_URL || "https://chat.cruxsee.in", "https://home.cruxsee.in"]
+      ? [env.FRONTEND_URL || "https://chat.cruxsee.in", "https://home.cruxsee.in", "https://cruxsee.in", "https://www.cruxsee.in"]
       : ["http://localhost:3000"],
     credentials: true,
   }),
