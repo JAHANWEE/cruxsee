@@ -20,9 +20,9 @@ export const corsair = createCorsair({
   database: pool,
   kek: process.env.CORSAIR_KEK!,
   multiTenancy: true, // each user = tenant
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/corsair`,
   connect: {
-    redirectUri: "http://localhost:3000/chat"
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+    redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/chat`
   }
 });
 
