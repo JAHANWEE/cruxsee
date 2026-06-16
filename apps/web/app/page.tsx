@@ -1,227 +1,127 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useSession, signIn } from "~/lib/auth-client";
-import { Sidebar } from "./components/sidebar";
-import { MessageView } from "./components/message-view";
-import { Composer } from "./components/composer";
+import { useEffect } from "react";
+import "./waitlist.css";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-
-export interface Thread {
-  id: string;
-  title: string;
-  createdAt: string;
-}
-
-export interface Message {
-  id: string;
-  role: "user" | "assistant" | "tool" | "system";
-  content: string | null;
-  toolCallId: string | null;
-  createdAt: string;
-}
-
-export interface ToolCall {
-  id: string;
-  toolCallId: string;
-  toolName: string;
-  status: string;
-  input: Record<string, unknown>;
-  output: Record<string, unknown> | null;
-}
-
-async function trpcQuery(path: string, input: Record<string, unknown>) {
-  const params = new URLSearchParams({ input: JSON.stringify(input) });
-  const res = await fetch(`${API_URL}/trpc/${path}?${params}`, { credentials: "include" });
-  const data = await res.json();
-  return data.result?.data;
-}
-
-async function trpcMutate(path: string, input: Record<string, unknown>) {
-  const res = await fetch(`${API_URL}/trpc/${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(input),
-  });
-  const data = await res.json();
-  return data.result?.data;
-}
-
-export default function ChatPage() {
-  const { data: session, isPending } = useSession();
-  const [threads, setThreads] = useState<Thread[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [agentStatus, setAgentStatus] = useState<string>("");
-
-  const userId = session?.user?.id;
-
+export default function WaitlistPage() {
   useEffect(() => {
-    if (!userId) return;
-    trpcQuery("thread.list", { userId }).then(setThreads);
-  }, [userId]);
-
-  useEffect(() => {
-    if (!activeThreadId) {
-      setMessages([]);
-      setToolCalls([]);
-      return;
-    }
-    trpcQuery("thread.messages", { threadId: activeThreadId }).then(setMessages);
-    trpcQuery("thread.toolCalls", { threadId: activeThreadId }).then(setToolCalls);
-  }, [activeThreadId]);
-
-  async function handleNewThread() {
-    if (!userId) return;
-    const thread = await trpcMutate("thread.create", { userId });
-    setThreads((prev) => [thread, ...prev]);
-    setActiveThreadId(thread.id);
-    setMessages([]);
-    setToolCalls([]);
-  }
-
-  async function handleSend(content: string) {
-    if (!activeThreadId || !content.trim()) return;
-
-    const optimistic: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content,
-      toolCallId: null,
-      createdAt: new Date().toISOString(),
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'w') {
+        e.preventDefault();
+        document.getElementById('emailInput')?.focus();
+      }
     };
-    setMessages((prev) => [...prev, optimistic]);
-    setLoading(true);
-    setAgentStatus("Thinking...");
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
-    const result = await trpcMutate("agent.send", { threadId: activeThreadId, content });
-
-    if (result?.type === "tool_calls") {
-      setAgentStatus("Waiting for approval...");
-      const [msgs, tcs] = await Promise.all([
-        trpcQuery("thread.messages", { threadId: activeThreadId }),
-        trpcQuery("thread.toolCalls", { threadId: activeThreadId }),
-      ]);
-      setMessages(msgs);
-      setToolCalls(tcs);
-    } else if (result?.type === "message") {
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: result.content, toolCallId: null, createdAt: new Date().toISOString() },
-      ]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailInput = document.getElementById('emailInput') as HTMLInputElement;
+    if (emailInput && emailInput.value) {
+      alert(`Thanks for joining the waitlist, ${emailInput.value}!`);
+      emailInput.value = "";
     }
-
-    setLoading(false);
-    setAgentStatus("");
-
-    if (userId) {
-      trpcQuery("thread.list", { userId }).then(setThreads);
-    }
-  }
-
-  async function handleApprove(toolCallId: string) {
-    setLoading(true);
-    setAgentStatus("Executing action...");
-
-    const result = await trpcMutate("agent.approveToolCall", { toolCallId });
-
-    if (activeThreadId) {
-      const [msgs, tcs] = await Promise.all([
-        trpcQuery("thread.messages", { threadId: activeThreadId }),
-        trpcQuery("thread.toolCalls", { threadId: activeThreadId }),
-      ]);
-      setMessages(msgs);
-      setToolCalls(tcs);
-    }
-
-    if (result?.type === "message" && result.content) {
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: result.content, toolCallId: null, createdAt: new Date().toISOString() },
-      ]);
-    }
-
-    setLoading(false);
-    setAgentStatus("");
-  }
-
-  async function handleReject(toolCallId: string) {
-    await trpcMutate("agent.rejectToolCall", { toolCallId });
-    if (activeThreadId) {
-      const tcs = await trpcQuery("thread.toolCalls", { threadId: activeThreadId });
-      setToolCalls(tcs);
-    }
-  }
-
-  if (isPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#09090b]">
-        <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#09090b] text-white">
-        <div className="text-center space-y-6">
-          <h1 className="text-4xl font-light tracking-tight">Cruxsee</h1>
-          <p className="text-zinc-400">Sign in to access your workspace.</p>
-          <button onClick={() => signIn.social({ provider: "google", callbackURL: "/" })} className="inline-block px-6 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-zinc-200 transition-colors">Sign In</button>
-        </div>
-      </div>
-    );
-  }
+  };
 
   return (
-    <div className="h-screen flex bg-[#09090b] text-zinc-100 font-sans selection:bg-white/20">
-      <Sidebar
-        threads={threads}
-        activeThreadId={activeThreadId}
-        onSelectThread={setActiveThreadId}
-        onNewThread={handleNewThread}
-      />
-      <div className="flex-1 flex flex-col relative h-full">
-        {/* Subtle background glow effect */}
-        <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
-        
-        {activeThreadId ? (
-          <div className="flex-1 flex flex-col w-full max-w-4xl mx-auto h-full relative z-10">
-            <MessageView
-              messages={messages}
-              toolCalls={toolCalls}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              loading={loading}
-              agentStatus={agentStatus}
-            />
-            <Composer onSend={handleSend} disabled={loading} />
+    <div className="waitlist-theme">
+      <div className="noise-overlay"></div>
+      <div className="ambient-glow"></div>
+      
+      <div className="focus-backdrop" id="focusBackdrop"></div>
+
+      <div className="page-container">
+        <nav className="expert-nav">
+          <div className="brand">
+            <span className="brand-icon">✦</span>
+            <span className="brand-name">cruxsee</span>
           </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center z-10">
-            <div className="text-center space-y-6">
-              <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl ring-1 ring-white/10">
-                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <div className="nav-badge">
+            <span className="pulse-indicator"></span>
+            Coming Soon
+          </div>
+        </nav>
+
+        <main className="hero-center">
+          <div className="hero-pill">
+            <span className="pill-highlight">NEW</span>
+            <div className="pill-divider"></div>
+            <span className="pill-text">Powered by Corsair MCP Integrations</span>
+          </div>
+          
+          <h1 className="hero-display">
+            The email workflow <br /> you've always wanted.
+          </h1>
+          
+          <p className="hero-description">
+            Cruxsee gives you complete control over Gmail and Google Calendar. <br /> Keyboard-first. AI-native. Built on Corsair.
+          </p>
+
+          <div className="waitlist-wrapper">
+            <form id="expertWaitlistForm" className="magnetic-form" onSubmit={handleSubmit}>
+              <div className="input-group">
+                <svg className="mail-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
+                <input type="email" id="emailInput" placeholder="Enter your email to join waitlist" required autoComplete="email" />
               </div>
-              <h2 className="text-2xl font-medium tracking-tight">Ready to assist</h2>
-              <p className="text-zinc-400 text-sm max-w-sm mx-auto leading-relaxed">
-                Start a new conversation to begin managing your workflow at inhumane speed.
-              </p>
-              <button
-                onClick={handleNewThread}
-                className="mt-4 px-6 py-2.5 bg-white text-black hover:bg-zinc-200 rounded-full text-sm font-medium transition-all shadow-lg shadow-white/5 hover:scale-105 active:scale-95"
-              >
-                Start New Thread
+              <button type="submit" className="magnetic-button" id="magneticBtn">
+                <span className="btn-text">Get Access</span>
+                <svg className="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12,5 19,12 12,19"></polyline>
+                </svg>
               </button>
+            </form>
+            <div className="shortcut-hint">
+              Press <kbd>W</kbd> to focus
             </div>
           </div>
-        )}
+        </main>
+
+        <div className="interface-showcase">
+          <div className="showcase-ambient-glow"></div>
+          <div className="expert-mockup">
+            <div className="mockup-top-bar">
+              <div className="traffic-lights"><span></span><span></span><span></span></div>
+              <div className="mockup-title">cruxsee://command-center</div>
+            </div>
+            <div className="mockup-content">
+              <div className="cmd-palette">
+                <div className="cmd-input">
+                  <span className="cmd-icon">⌘</span>
+                  <span>Draft meeting invite to team for next Thursday...</span>
+                </div>
+                <div className="cmd-results">
+                  <div className="cmd-item active">
+                    <span className="item-tag mcp">MCP Agent</span>
+                    <span className="item-desc">Scheduling meeting via Google Calendar API...</span>
+                  </div>
+                  <div className="cmd-item">
+                    <span className="item-tag gmail">Gmail API</span>
+                    <span className="item-desc">Drafting notification email...</span>
+                  </div>
+                  <div className="cmd-item">
+                    <span className="item-tag filter">Priority LLM</span>
+                    <span className="item-desc">Filtering incoming responses...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer className="expert-footer">
+          <div className="footer-content">
+            <span>© 2026 Cruxsee. Built on Corsair.</span>
+            <div className="footer-links">
+              <a href="#">X / Twitter</a>
+              <a href="#">LinkedIn</a>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
