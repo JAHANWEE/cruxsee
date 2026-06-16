@@ -1,6 +1,6 @@
 # ─── Base ───────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat curl
+RUN apk add --no-cache libc6-compat curl python3 make g++
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 WORKDIR /app
 
