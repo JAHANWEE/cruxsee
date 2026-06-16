@@ -72,4 +72,4 @@ CMD ["node", "dist/index.js"]
 FROM builder AS migrator
 RUN apk add --no-cache postgresql-client
 WORKDIR /app
-CMD ["sh", "-c", "cd packages/auth && pnpm migrate && cd ../database && pnpm db:migrate && cd ../corsair && psql $DATABASE_URL -f migration.sql"]
+CMD ["sh", "-c", "cd packages/auth && pnpm exec better-auth migrate --yes --config ./src/index.ts && cd ../corsair && psql $DATABASE_URL -f migration.sql"]

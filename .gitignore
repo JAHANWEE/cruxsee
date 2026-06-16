@@ -47,5 +47,9 @@ yarn-error.log*
 # Docker env (keep .env.example)
 docker/.env
 
+# Initialize script (contains VM details)
+initialize.sh
+.env.production
+
 #keys
 private*
