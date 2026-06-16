@@ -14,8 +14,8 @@ const googleConfig = {
 
 export const corsair = createCorsair({
   plugins: [
-    gmail(googleConfig), 
-    googlecalendar(googleConfig)
+    gmail(googleConfig as any), 
+    googlecalendar(googleConfig as any)
   ],
   database: pool,
   kek: process.env.CORSAIR_KEK!,
