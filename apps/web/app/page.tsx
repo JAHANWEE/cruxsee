@@ -1,104 +1,228 @@
 "use client";
 
-import { useSession, signIn, signOut } from "~/lib/auth-client";
-import Link from "next/link";
-import { ArrowRight, Mail, Calendar, Zap, Lock, BookOpen } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useSession, signIn } from "~/lib/auth-client";
+import { Sidebar } from "./components/sidebar";
+import { MessageView } from "./components/message-view";
+import { Composer } from "./components/composer";
 
-export default function Home() {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+export interface Thread {
+  id: string;
+  title: string;
+  createdAt: string;
+}
+
+export interface Message {
+  id: string;
+  role: "user" | "assistant" | "tool" | "system";
+  content: string | null;
+  toolCallId: string | null;
+  createdAt: string;
+}
+
+export interface ToolCall {
+  id: string;
+  toolCallId: string;
+  toolName: string;
+  status: string;
+  input: Record<string, unknown>;
+  output: Record<string, unknown> | null;
+}
+
+async function trpcQuery(path: string, input: Record<string, unknown>) {
+  const params = new URLSearchParams({ input: JSON.stringify(input) });
+  const res = await fetch(`${API_URL}/trpc/${path}?${params}`, { credentials: "include" });
+  const data = await res.json();
+  return data.result?.data;
+}
+
+async function trpcMutate(path: string, input: Record<string, unknown>) {
+  const res = await fetch(`${API_URL}/trpc/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  const data = await res.json();
+  return data.result?.data;
+}
+
+export default function ChatPage() {
   const { data: session, isPending } = useSession();
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<string>("");
+
+  const userId = session?.user?.id;
+
+  useEffect(() => {
+    if (!userId) return;
+    trpcQuery("thread.list", { userId }).then(setThreads);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!activeThreadId) {
+      setMessages([]);
+      setToolCalls([]);
+      return;
+    }
+    trpcQuery("thread.messages", { threadId: activeThreadId }).then(setMessages);
+    trpcQuery("thread.toolCalls", { threadId: activeThreadId }).then(setToolCalls);
+  }, [activeThreadId]);
+
+  async function handleNewThread() {
+    if (!userId) return;
+    const thread = await trpcMutate("thread.create", { userId });
+    setThreads((prev) => [thread, ...prev]);
+    setActiveThreadId(thread.id);
+    setMessages([]);
+    setToolCalls([]);
+  }
+
+  async function handleSend(content: string) {
+    if (!activeThreadId || !content.trim()) return;
+
+    const optimistic: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content,
+      toolCallId: null,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    setLoading(true);
+    setAgentStatus("Thinking...");
+
+    const result = await trpcMutate("agent.send", { threadId: activeThreadId, content });
+
+    if (result?.type === "tool_calls") {
+      setAgentStatus("Waiting for approval...");
+      const [msgs, tcs] = await Promise.all([
+        trpcQuery("thread.messages", { threadId: activeThreadId }),
+        trpcQuery("thread.toolCalls", { threadId: activeThreadId }),
+      ]);
+      setMessages(msgs);
+      setToolCalls(tcs);
+    } else if (result?.type === "message") {
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "assistant", content: result.content, toolCallId: null, createdAt: new Date().toISOString() },
+      ]);
+    }
+
+    setLoading(false);
+    setAgentStatus("");
+
+    if (userId) {
+      trpcQuery("thread.list", { userId }).then(setThreads);
+    }
+  }
+
+  async function handleApprove(toolCallId: string) {
+    setLoading(true);
+    setAgentStatus("Executing action...");
+
+    const result = await trpcMutate("agent.approveToolCall", { toolCallId });
+
+    if (activeThreadId) {
+      const [msgs, tcs] = await Promise.all([
+        trpcQuery("thread.messages", { threadId: activeThreadId }),
+        trpcQuery("thread.toolCalls", { threadId: activeThreadId }),
+      ]);
+      setMessages(msgs);
+      setToolCalls(tcs);
+    }
+
+    if (result?.type === "message" && result.content) {
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "assistant", content: result.content, toolCallId: null, createdAt: new Date().toISOString() },
+      ]);
+    }
+
+    setLoading(false);
+    setAgentStatus("");
+  }
+
+  async function handleReject(toolCallId: string) {
+    await trpcMutate("agent.rejectToolCall", { toolCallId });
+    if (activeThreadId) {
+      const tcs = await trpcQuery("thread.toolCalls", { threadId: activeThreadId });
+      setToolCalls(tcs);
+    }
+  }
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#09090b]">
+        <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#09090b] text-white">
+        <div className="text-center space-y-6">
+          <h1 className="text-4xl font-light tracking-tight">Cruxsee</h1>
+          <p className="text-zinc-400">Sign in to access your workspace.</p>
+          <button onClick={() => signIn.social({ provider: "google", callbackURL: "/" })} className="inline-block px-6 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-zinc-200 transition-colors">Sign In</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 flex flex-col font-sans selection:bg-zinc-900 selection:text-white dark:selection:bg-white dark:selection:text-zinc-900">
-      {/* Header */}
-      <header className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-white/50 dark:bg-zinc-950/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-md flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white dark:text-zinc-900" />
+    <div className="h-screen flex bg-[#09090b] text-zinc-100 font-sans selection:bg-white/20">
+      <Sidebar
+        threads={threads}
+        activeThreadId={activeThreadId}
+        onSelectThread={setActiveThreadId}
+        onNewThread={handleNewThread}
+      />
+      <div className="flex-1 flex flex-col relative h-full">
+        {/* Subtle background glow effect */}
+        <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
+        
+        {activeThreadId ? (
+          <div className="flex-1 flex flex-col w-full max-w-4xl mx-auto h-full relative z-10">
+            <MessageView
+              messages={messages}
+              toolCalls={toolCalls}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              loading={loading}
+              agentStatus={agentStatus}
+            />
+            <Composer onSend={handleSend} disabled={loading} />
           </div>
-          <span className="font-bold text-xl tracking-tight">Cruxsee</span>
-        </div>
-        <nav className="hidden md:flex gap-6 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-          <Link href="/privacy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Privacy</Link>
-          <Link href="/terms" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Terms</Link>
-          <Link href="/help" className="hover:text-zinc-900 dark:hover:text-white transition-colors">Support</Link>
-        </nav>
-        <div>
-          {!isPending && (
-            session ? (
-              <Link href="/chat" className="px-4 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors font-medium">
-                Go to App
-              </Link>
-            ) : (
+        ) : (
+          <div className="flex-1 flex items-center justify-center z-10">
+            <div className="text-center space-y-6">
+              <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl ring-1 ring-white/10">
+                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-medium tracking-tight">Ready to assist</h2>
+              <p className="text-zinc-400 text-sm max-w-sm mx-auto leading-relaxed">
+                Start a new conversation to begin managing your workflow at inhumane speed.
+              </p>
               <button
-                onClick={() => signIn.social({ provider: "google", callbackURL: "/chat" })}
-                className="px-4 py-2 text-sm bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-full hover:opacity-90 transition-opacity font-medium"
+                onClick={handleNewThread}
+                className="mt-4 px-6 py-2.5 bg-white text-black hover:bg-zinc-200 rounded-full text-sm font-medium transition-all shadow-lg shadow-white/5 hover:scale-105 active:scale-95"
               >
-                Sign In
+                Start New Thread
               </button>
-            )
-          )}
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <main className="flex-1 flex flex-col items-center justify-center text-center px-4 py-24 sm:py-32">
-        <div className="max-w-3xl space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          <h1 className="text-5xl sm:text-7xl font-bold tracking-tighter leading-[1.1] bg-gradient-to-br from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-500 bg-clip-text text-transparent">
-            Work at inhumane speed.
-          </h1>
-          <p className="text-lg sm:text-xl text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-            Cruxsee connects your emails, calendar, and workflows into a single autonomous intelligence. Delegate tasks and get hours back every week.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            {isPending ? (
-               <div className="px-8 py-4 bg-zinc-200 dark:bg-zinc-800 rounded-full animate-pulse w-48 h-14" />
-            ) : session ? (
-              <Link href="/chat" className="flex items-center gap-2 px-8 py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-full hover:opacity-90 transition-all hover:scale-105 font-medium text-lg">
-                Enter Workspace <ArrowRight className="w-5 h-5" />
-              </Link>
-            ) : (
-              <button
-                onClick={() => signIn.social({ provider: "google", callbackURL: "/chat" })}
-                className="flex items-center gap-2 px-8 py-4 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 rounded-full hover:opacity-90 transition-all hover:scale-105 font-medium text-lg shadow-xl shadow-zinc-900/20 dark:shadow-white/10"
-              >
-                Get Started with Google <ArrowRight className="w-5 h-5" />
-              </button>
-            )}
+            </div>
           </div>
-        </div>
-
-        {/* Feature Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl w-full mt-32 text-left">
-          <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow">
-            <Mail className="w-8 h-8 mb-4 text-zinc-900 dark:text-white" />
-            <h3 className="text-xl font-semibold mb-2">Email Autopilot</h3>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">Let the AI draft, reply, and sort your inbox automatically. You just approve the final actions.</p>
-          </div>
-          <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow">
-            <Calendar className="w-8 h-8 mb-4 text-zinc-900 dark:text-white" />
-            <h3 className="text-xl font-semibold mb-2">Calendar Mgmt</h3>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">Cruxsee books meetings, finds available slots, and handles the back-and-forth scheduling ping-pong.</p>
-          </div>
-          <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow">
-            <Lock className="w-8 h-8 mb-4 text-zinc-900 dark:text-white" />
-            <h3 className="text-xl font-semibold mb-2">Private & Secure</h3>
-            <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">Your data remains yours. Cruxsee uses secure OAuth and never trains public models on your personal emails.</p>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="py-8 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-zinc-500 dark:text-zinc-500">
-          <p>© {new Date().getFullYear()} Cruxsee. All rights reserved.</p>
-          <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-zinc-900 dark:hover:text-zinc-300 transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-zinc-900 dark:hover:text-zinc-300 transition-colors">Terms of Service</Link>
-            <Link href="/help" className="hover:text-zinc-900 dark:hover:text-zinc-300 transition-colors">Help & Support</Link>
-          </div>
-        </div>
-      </footer>
+        )}
+      </div>
     </div>
   );
 }
