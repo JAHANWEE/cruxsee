@@ -69,7 +69,9 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
 CMD ["node", "dist/index.js"]
 
 # ─── Migrator ─────────────────────────────────────────────────────────────
-FROM builder AS migrator
+FROM node:20-alpine AS migrator
 RUN apk add --no-cache postgresql-client
 WORKDIR /app
-CMD ["sh", "-c", "cd packages/auth && pnpm exec better-auth migrate --yes --config ./src/index.ts && cd ../corsair && psql $DATABASE_URL -f migration.sql"]
+COPY packages/auth/migration.sql ./auth-migration.sql
+COPY packages/corsair/migration.sql ./corsair-migration.sql
+CMD ["sh", "-c", "psql $DATABASE_URL -f /app/auth-migration.sql && psql $DATABASE_URL -f /app/corsair-migration.sql"]
