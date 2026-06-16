@@ -13,7 +13,7 @@ importers:
         version: 11.0.0
       openai:
         specifier: ^6.42.0
-        version: 6.42.0(zod@4.4.3)
+        version: 6.42.0(zod@4.3.5)
     devDependencies:
       prettier:
         specifier: ^3.7.4
@@ -61,7 +61,7 @@ importers:
         specifier: ^3.1.0
         version: 3.1.0(@trpc/server@11.8.1(typescript@5.9.3))(zod-openapi@5.4.5(zod@4.3.5))(zod@4.3.5)
       zod:
-        specifier: ^4.3.5
+        specifier: 4.3.5
         version: 4.3.5
     devDependencies:
       '@repo/eslint-config':
@@ -260,7 +260,7 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       zod:
-        specifier: ^4.3.5
+        specifier: 4.3.5
         version: 4.3.5
     devDependencies:
       '@repo/eslint-config':
@@ -353,7 +353,7 @@ importers:
         specifier: ^8.16.3
         version: 8.16.3
       zod:
-        specifier: ^4.3.5
+        specifier: 4.3.5
         version: 4.3.5
     devDependencies:
       '@repo/eslint-config':
@@ -420,7 +420,7 @@ importers:
         specifier: ^3.19.0
         version: 3.19.0
       zod:
-        specifier: ^4.3.5
+        specifier: 4.3.5
         version: 4.3.5
     devDependencies:
       '@repo/eslint-config':
@@ -451,7 +451,7 @@ importers:
         specifier: ^6.42.0
         version: 6.42.0(zod@4.3.5)
       zod:
-        specifier: ^4.3.5
+        specifier: 4.3.5
         version: 4.3.5
       zod-to-json-schema:
         specifier: ^3.25.2
@@ -488,7 +488,7 @@ importers:
         specifier: ^3.1.0
         version: 3.1.0(@trpc/server@11.8.1(typescript@5.9.3))(zod-openapi@5.4.5(zod@4.3.5))(zod@4.3.5)
       zod:
-        specifier: ^4.3.5
+        specifier: 4.3.5
         version: 4.3.5
     devDependencies:
       '@repo/eslint-config':
@@ -8495,7 +8495,7 @@ snapshots:
       kysely: 0.28.17
       kysely-postgres-js: 3.0.0(kysely@0.28.17)
       uuid: 13.0.2
-      zod: 4.4.3
+      zod: 4.3.5
     transitivePeerDependencies:
       - postgres
 
@@ -8504,7 +8504,7 @@ snapshots:
       kysely: 0.28.17
       kysely-postgres-js: 3.0.0(kysely@0.28.17)
       uuid: 13.0.2
-      zod: 4.4.3
+      zod: 4.3.5
     transitivePeerDependencies:
       - postgres
 
@@ -10286,10 +10286,6 @@ snapshots:
   openai@6.42.0(zod@4.3.5):
     optionalDependencies:
       zod: 4.3.5
-
-  openai@6.42.0(zod@4.4.3):
-    optionalDependencies:
-      zod: 4.4.3
 
   openapi3-ts@4.4.0:
     dependencies:
