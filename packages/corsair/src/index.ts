@@ -7,11 +7,23 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+const googleConfig = {
+  clientId: process.env.GOOGLE_CLIENT_ID!,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+};
+
 export const corsair = createCorsair({
-  plugins: [gmail(), googlecalendar()],
+  plugins: [
+    gmail(googleConfig), 
+    googlecalendar(googleConfig)
+  ],
   database: pool,
   kek: process.env.CORSAIR_KEK!,
   multiTenancy: true, // each user = tenant
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/corsair`,
+  connect: {
+    redirectUri: "http://localhost:3000/chat"
+  }
 });
 
 export { pool };

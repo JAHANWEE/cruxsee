@@ -1,89 +1,69 @@
 import type { ChatCompletionTool } from "openai/resources/chat/completions";
+import { buildCorsairToolDefs, type CorsairToolDef } from "@corsair-dev/mcp";
+import { corsair } from "@repo/corsair";
 
-// ─── Fake Tool Definitions (for OpenAI function calling) ─────────────────
+// ─── Corsair MCP Tools ───────────────────────────────────────────────────
 
-export const toolDefinitions: ChatCompletionTool[] = [
-  {
-    type: "function",
-    function: {
-      name: "getWeather",
-      description: "Get the current weather for a given city",
-      parameters: {
-        type: "object",
-        properties: {
-          city: { type: "string", description: "City name, e.g. 'Mumbai'" },
-        },
-        required: ["city"],
-      },
+const mcpTools = buildCorsairToolDefs({ corsair });
+
+const toolSchemas: Record<string, any> = {
+  list_operations: {
+    type: "object",
+    properties: {
+      plugin: { type: "string" },
+      type: { type: "string", enum: ["api", "webhooks", "db"] },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "createReminder",
-      description: "Create a reminder for the user",
-      parameters: {
-        type: "object",
-        properties: {
-          title: { type: "string", description: "Reminder title" },
-          time: { type: "string", description: "When to remind, e.g. 'tomorrow at 9am'" },
-        },
-        required: ["title", "time"],
-      },
+  get_schema: {
+    type: "object",
+    properties: {
+      path: { type: "string" },
     },
+    required: ["path"],
   },
-  {
-    type: "function",
-    function: {
-      name: "createNote",
-      description: "Create a note with a title and body",
-      parameters: {
-        type: "object",
-        properties: {
-          title: { type: "string", description: "Note title" },
-          body: { type: "string", description: "Note content" },
-        },
-        required: ["title", "body"],
-      },
+  run_script: {
+    type: "object",
+    properties: {
+      code: { type: "string" },
     },
+    required: ["code"],
   },
-];
-
-// ─── Fake Tool Executors ─────────────────────────────────────────────────
-
-type ToolExecutor = (input: Record<string, unknown>) => Promise<string>;
-
-const executors: Record<string, ToolExecutor> = {
-  getWeather: async (input) => {
-    const city = input.city as string;
-    // Fake response
-    return JSON.stringify({
-      city,
-      temperature: "28°C",
-      condition: "Partly cloudy",
-      humidity: "65%",
-    });
-  },
-
-  createReminder: async (input) => {
-    return JSON.stringify({
-      success: true,
-      reminder: { title: input.title, time: input.time, id: crypto.randomUUID() },
-    });
-  },
-
-  createNote: async (input) => {
-    return JSON.stringify({
-      success: true,
-      note: { title: input.title, body: input.body, id: crypto.randomUUID() },
-    });
+  corsair_setup: {
+    type: "object",
+    properties: {
+      tenantId: { type: "string" },
+    },
   },
 };
 
+export const toolDefinitions: ChatCompletionTool[] = mcpTools.map((t: CorsairToolDef) => ({
+  type: "function",
+  function: {
+    name: t.name,
+    description: t.description,
+    parameters: toolSchemas[t.name] || { type: "object", properties: {} },
+  },
+}));
+
+// ─── Tool Executor ────────────────────────────────────────────────────────
+
 export async function executeTool(toolName: string, input: Record<string, unknown>): Promise<string> {
-  const executor = executors[toolName];
-  if (!executor) {
+  const tool = mcpTools.find((t: CorsairToolDef) => t.name === toolName);
+  if (!tool) {
     return JSON.stringify({ error: `Unknown tool: ${toolName}` });
   }
-  return executor(input);
+
+  try {
+    const result = await tool.handler(input);
+    
+    // Unwrap MCP CallToolResult so the LLM gets plain text
+    if (result && typeof result === "object" && Array.isArray((result as any).content)) {
+      const text = (result as any).content.map((c: any) => c.text).join('\n');
+      return JSON.stringify(text);
+    }
+
+    return JSON.stringify(result);
+  } catch (e: any) {
+    return JSON.stringify({ error: e.message });
+  }
 }

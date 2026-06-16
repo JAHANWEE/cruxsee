@@ -5,13 +5,23 @@ import { eq } from "@repo/database";
 import { toolDefinitions, executeTool } from "./tools";
 
 const openai = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY || "missing",
-  baseURL: "https://api.groq.com/openai/v1",
+  apiKey: process.env.OPENAI_API_KEY || "missing",
 });
 
-const SYSTEM_PROMPT = `You are Cruxsee, an AI operator that helps users manage their email, calendar, and workflows at high speed.
+const SYSTEM_PROMPT = (userId: string) => `You are Cruxsee, an AI operator that helps users manage their email, calendar, and workflows at high speed.
 
-You have access to tools. When a user asks you to do something that requires a tool, call the appropriate tool function. Do NOT make up information — always use tools for actions.
+You have access to the Corsair integration platform, which provides access to external services like Gmail, Calendar, Slack, etc.
+To interact with these services, you must use your provided Corsair tools in the following order:
+1. Use \`list_operations\` to discover available endpoints (e.g., search for 'gmail' or 'calendar' endpoints).
+2. CRITICAL: After finding the endpoint (like 'gmail.api.messages.list'), you MUST use \`get_schema\` to inspect the exact parameters for that endpoint. Do not guess the parameters.
+3. Once you know the schema, use \`run_script\` to execute JavaScript using the \`corsair\` SDK. 
+   CRITICAL MULTITENANCY RULE: You must ALWAYS wrap your API calls in the user's tenant context using their userId: "${userId}".
+   Example: \`const res = await corsair.withTenant("${userId}").gmail.api.messages.list({ maxResults: 2 }); return res;\`
+
+"You have access to Corsair, a tool integration platform. ALWAYS prioritize using Corsair tools if they are available for the task.",
+"CRITICAL AUTHENTICATION RULE: If an API call fails because it 'needs credentials' (e.g. [auth-missing:gmail:oauth_2]), DO NOT guess URLs or try to fix it using set_topic_id. Instead, immediately output a clickable markdown link telling the user to authorize using exactly this URL format: [Authorize Integration](http://localhost:4000/api/corsair/connect?plugin=PLUGIN_ID&tenantId=${userId}). Replace PLUGIN_ID with the name of the failing plugin (e.g., 'gmail').",
+
+When the user asks you to perform a task (like fetching emails), DO NOT say you cannot do it. ALWAYS use the Corsair tools to discover the APIs and execute the task.
 
 Be concise, direct, and professional. You are not a chatbot — you are an operator.`;
 
@@ -39,84 +49,16 @@ export async function sendMessage(threadId: string, userContent: string): Promis
     content: userContent,
   });
 
-  // Load conversation history
-  const history = await db
-    .select()
-    .from(messagesTable)
-    .where(eq(messagesTable.threadId, threadId))
-    .orderBy(messagesTable.createdAt);
-
-  // Build messages for OpenAI
-  const messages: OpenAI.ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
-    ...history.map((m): OpenAI.ChatCompletionMessageParam => {
-      if (m.role === "tool") {
-        return { role: "tool", content: m.content || "", tool_call_id: m.toolCallId || "" };
-      }
-      return { role: m.role as "user" | "assistant" | "system", content: m.content || "" };
-    }),
-  ];
+  const messages = await buildOpenAIMessages(threadId);
 
   // Call OpenAI
   const completion = await openai.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "gpt-4o-mini",
     messages,
     tools: toolDefinitions,
   });
 
-  const choice = completion.choices[0];
-  if (!choice) throw new Error("No response from OpenAI");
-
-  const assistantMessage = choice.message;
-
-  // If tool calls requested
-  if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
-    // Save assistant message with tool_calls metadata
-    await db.insert(messagesTable).values({
-      threadId,
-      role: "assistant",
-      content: assistantMessage.content || null,
-    });
-
-    // Save each tool call with waiting_confirmation status
-    const savedToolCalls = [];
-    for (const tc of assistantMessage.tool_calls) {
-      if (tc.type !== "function") continue;
-      const fn = tc as { id: string; type: "function"; function: { name: string; arguments: string } };
-      const input = JSON.parse(fn.function.arguments);
-      const [saved] = await db.insert(toolCallsTable).values({
-        threadId,
-        toolCallId: fn.id,
-        toolName: fn.function.name,
-        status: "waiting_confirmation",
-        input,
-      }).returning();
-      if (!saved) continue;
-      savedToolCalls.push({
-        id: saved.id,
-        toolCallId: fn.id,
-        toolName: fn.function.name,
-        input,
-      });
-    }
-
-    // Update thread title on first message
-    await maybeUpdateTitle(threadId, userContent);
-
-    return { type: "tool_calls", toolCalls: savedToolCalls };
-  }
-
-  // No tool calls — direct response
-  const content = assistantMessage.content || "";
-  await db.insert(messagesTable).values({
-    threadId,
-    role: "assistant",
-    content,
-  });
-
-  await maybeUpdateTitle(threadId, userContent);
-
-  return { type: "message", content };
+  return handleOpenAIResponse(threadId, userContent, completion);
 }
 
 /**
@@ -164,38 +106,72 @@ export async function approveToolCall(toolCallId: string): Promise<AgentResponse
     return { type: "message", content: `Tool "${toolCall.toolName}" executed. Waiting for other approvals.` };
   }
 
-  // All tools approved — continue conversation with OpenAI
-  const history = await db
-    .select()
-    .from(messagesTable)
-    .where(eq(messagesTable.threadId, toolCall.threadId))
-    .orderBy(messagesTable.createdAt);
-
-  const messages: OpenAI.ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
-    ...history.map((m): OpenAI.ChatCompletionMessageParam => {
-      if (m.role === "tool") {
-        return { role: "tool", content: m.content || "", tool_call_id: m.toolCallId || "" };
-      }
-      return { role: m.role as "user" | "assistant" | "system", content: m.content || "" };
-    }),
-  ];
+  const messages = await buildOpenAIMessages(toolCall.threadId);
 
   const completion = await openai.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "gpt-4o-mini",
     messages,
     tools: toolDefinitions,
   });
 
-  const choice = completion.choices[0];
-  const content = choice?.message.content || "Done.";
+  return handleOpenAIResponse(toolCall.threadId, toolCall.threadId /* we don't have userContent, pass threadId or just skip title update */, completion);
+}
 
+/**
+ * Handle OpenAI completion, saving tool calls or plain messages.
+ */
+async function handleOpenAIResponse(
+  threadId: string, 
+  userContent: string, 
+  completion: OpenAI.ChatCompletion
+): Promise<AgentResponse> {
+  const choice = completion.choices[0];
+  if (!choice) throw new Error("No response from OpenAI");
+
+  const assistantMessage = choice.message;
+
+  // If tool calls requested
+  if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+    await db.insert(messagesTable).values({
+      threadId,
+      role: "assistant",
+      content: assistantMessage.content || null,
+    });
+
+    const savedToolCalls = [];
+    for (const tc of assistantMessage.tool_calls) {
+      if (tc.type !== "function") continue;
+      const fn = tc as { id: string; type: "function"; function: { name: string; arguments: string } };
+      const input = JSON.parse(fn.function.arguments);
+      const [saved] = await db.insert(toolCallsTable).values({
+        threadId,
+        toolCallId: fn.id,
+        toolName: fn.function.name,
+        status: "waiting_confirmation",
+        input,
+      }).returning();
+      if (!saved) continue;
+      savedToolCalls.push({
+        id: saved.id,
+        toolCallId: fn.id,
+        toolName: fn.function.name,
+        input,
+      });
+    }
+
+    if (userContent) await maybeUpdateTitle(threadId, userContent);
+    return { type: "tool_calls", toolCalls: savedToolCalls };
+  }
+
+  // No tool calls — direct response
+  const content = assistantMessage.content || "";
   await db.insert(messagesTable).values({
-    threadId: toolCall.threadId,
+    threadId,
     role: "assistant",
     content,
   });
 
+  if (userContent) await maybeUpdateTitle(threadId, userContent);
   return { type: "message", content };
 }
 
@@ -212,4 +188,70 @@ async function maybeUpdateTitle(threadId: string, firstMessage: string) {
     const title = firstMessage.slice(0, 60) + (firstMessage.length > 60 ? "..." : "");
     await db.update(threadsTable).set({ title }).where(eq(threadsTable.id, threadId));
   }
+}
+
+async function buildOpenAIMessages(threadId: string): Promise<OpenAI.ChatCompletionMessageParam[]> {
+  const [thread] = await db.select().from(threadsTable).where(eq(threadsTable.id, threadId));
+  const userId = thread?.userId || "unknown";
+
+  const history = await db
+    .select()
+    .from(messagesTable)
+    .where(eq(messagesTable.threadId, threadId))
+    .orderBy(messagesTable.createdAt);
+
+  const threadToolCalls = await db
+    .select()
+    .from(toolCallsTable)
+    .where(eq(toolCallsTable.threadId, threadId));
+
+  const openaiMessages: OpenAI.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM_PROMPT(userId) },
+  ];
+
+  for (let i = 0; i < history.length; i++) {
+    const m = history[i];
+    if (!m) continue;
+    
+    if (m.role === "tool") {
+      openaiMessages.push({ role: "tool", content: m.content || "", tool_call_id: m.toolCallId || "" });
+    } else if (m.role === "assistant") {
+      const toolCallsForThisMessage = [];
+      // Look ahead for tool messages that correspond to this assistant turn
+      for (let j = i + 1; j < history.length; j++) {
+        const nextM = history[j];
+        if (!nextM) continue;
+        if (nextM.role === "tool") {
+          const tcId = nextM.toolCallId;
+          const tc = threadToolCalls.find(t => t.toolCallId === tcId);
+          if (tc) {
+            toolCallsForThisMessage.push({
+              id: tc.toolCallId,
+              type: "function" as const,
+              function: {
+                name: tc.toolName,
+                arguments: JSON.stringify(tc.input)
+              }
+            });
+          }
+        } else {
+          break; // Stop looking when we hit the next user/assistant message
+        }
+      }
+
+      const assistantMsg: any = { role: "assistant" };
+      if (m.content) assistantMsg.content = m.content;
+      if (toolCallsForThisMessage.length > 0) assistantMsg.tool_calls = toolCallsForThisMessage;
+      
+      if (!assistantMsg.content && (!assistantMsg.tool_calls || assistantMsg.tool_calls.length === 0)) {
+        assistantMsg.content = "";
+      }
+
+      openaiMessages.push(assistantMsg);
+    } else {
+      openaiMessages.push({ role: m.role as "user" | "system", content: m.content || "" });
+    }
+  }
+
+  return openaiMessages;
 }
