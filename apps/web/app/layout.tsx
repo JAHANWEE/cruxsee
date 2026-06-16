@@ -13,8 +13,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Streamyst",
-  description: "Media Forwarding",
+  title: "Cruxsee",
+  description: "Work at inhumane speed.",
 };
 
 export default function RootLayout({
