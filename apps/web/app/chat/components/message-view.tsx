@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Bot, User } from "lucide-react";
 import type { Message, ToolCall } from "../page";
 
 import {
@@ -94,26 +97,34 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, loading,
 
 function MessageBubble({ message }: { message: Message }) {
   if (message.role === "tool") {
-    return (
-      <div className="ml-8 px-3 py-2 bg-zinc-100 dark:bg-zinc-900 rounded-md text-xs font-mono">
-        <span className="text-muted-foreground">Tool result:</span>
-        <pre className="mt-1 whitespace-pre-wrap">{message.content}</pre>
-      </div>
-    );
+    return null; // Hide raw tool results from the user
+  }
+
+  if (message.role === "assistant" && !message.content) {
+    return null; // Hide empty assistant messages (tool call wrappers)
   }
 
   const isUser = message.role === "user";
 
+  if (isUser) {
+    return (
+      <div className="flex justify-end my-6">
+        <div className="max-w-[75%] px-5 py-3 rounded-3xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-[15px]">
+          {message.content}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
-          isUser
-            ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-        }`}
-      >
-        {message.content || <span className="text-muted-foreground italic">...</span>}
+    <div className="flex items-start gap-4 my-6">
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center">
+        <Bot className="w-5 h-5" />
+      </div>
+      <div className="flex-1 min-w-0 prose prose-zinc dark:prose-invert max-w-none text-[15px] leading-relaxed">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {message.content || ""}
+        </ReactMarkdown>
       </div>
     </div>
   );
