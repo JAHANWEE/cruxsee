@@ -74,4 +74,5 @@ RUN apk add --no-cache postgresql-client
 WORKDIR /app
 COPY packages/auth/migration.sql ./auth-migration.sql
 COPY packages/corsair/migration.sql ./corsair-migration.sql
-CMD ["sh", "-c", "psql $DATABASE_URL -f /app/auth-migration.sql && psql $DATABASE_URL -f /app/corsair-migration.sql"]
+COPY packages/database/migrations/ ./db-migrations/
+CMD ["sh", "-c", "psql $DATABASE_URL -f /app/auth-migration.sql && psql $DATABASE_URL -f /app/corsair-migration.sql && for f in /app/db-migrations/*.sql; do psql $DATABASE_URL -f $f; done"]

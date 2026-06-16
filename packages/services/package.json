@@ -2,6 +2,9 @@
   "name": "@repo/services",
   "version": "1.0.0",
   "private": true,
+  "exports": {
+    "./agent": "./agent/index.ts"
+  },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
@@ -11,6 +14,7 @@
   "dependencies": {
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
+    "openai": "^6.42.0",
     "zod": "^4.3.5"
   }
 }
