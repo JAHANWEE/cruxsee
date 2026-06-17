@@ -1,7 +1,8 @@
 "use client";
 
 import type { Thread } from "../chat/page";
-import { Plus, MessageSquare, Menu, Trash2 } from "lucide-react";
+import { Plus, MessageSquare, Trash2, LogOut } from "lucide-react";
+import { signOut, useSession } from "~/lib/auth-client";
 
 interface SidebarProps {
   threads: Thread[];
@@ -12,6 +13,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, onDeleteThread }: SidebarProps) {
+  const { data: session } = useSession();
+
   return (
     <div className="w-[280px] h-full flex flex-col bg-[#09090b] border-r border-white/5">
       <div className="p-4">
@@ -68,14 +71,25 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
         )}
       </div>
       
-      {/* User profile / bottom area placeholder */}
+      {/* User profile + logout */}
       <div className="p-4 border-t border-white/5">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[#18181b] cursor-pointer transition-colors">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-500 flex-shrink-0" />
+        <div className="flex items-center gap-3 px-3 py-2">
+          {session?.user?.image ? (
+            <img src={session.user.image} alt="" className="w-8 h-8 rounded-full flex-shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-500 flex-shrink-0" />
+          )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-zinc-200 truncate">Workspace</p>
-            <p className="text-xs text-zinc-500 truncate">Manage settings</p>
+            <p className="text-sm font-medium text-zinc-200 truncate">{session?.user?.name || "User"}</p>
+            <p className="text-xs text-zinc-500 truncate">{session?.user?.email}</p>
           </div>
+          <button
+            onClick={() => signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/"; } } })}
+            className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
