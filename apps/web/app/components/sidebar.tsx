@@ -1,16 +1,17 @@
 "use client";
 
 import type { Thread } from "../chat/page";
-import { Plus, MessageSquare, Menu } from "lucide-react";
+import { Plus, MessageSquare, Menu, Trash2 } from "lucide-react";
 
 interface SidebarProps {
   threads: Thread[];
   activeThreadId: string | null;
   onSelectThread: (id: string) => void;
   onNewThread: () => void;
+  onDeleteThread?: (id: string) => void;
 }
 
-export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread }: SidebarProps) {
+export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, onDeleteThread }: SidebarProps) {
   return (
     <div className="w-[280px] h-full flex flex-col bg-[#09090b] border-r border-white/5">
       <div className="p-4">
@@ -30,18 +31,32 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread }
           Recent
         </div>
         {threads.map((thread) => (
-          <button
+          <div
             key={thread.id}
             onClick={() => onSelectThread(thread.id)}
-            className={`w-full flex items-center gap-3 px-3 py-3 text-sm rounded-xl transition-all group ${
+            className={`w-full flex items-center justify-between px-3 py-3 text-sm rounded-xl transition-all group cursor-pointer ${
               activeThreadId === thread.id
                 ? "bg-[#18181b] text-white shadow-sm ring-1 ring-white/5"
                 : "text-zinc-400 hover:bg-[#18181b]/50 hover:text-zinc-200"
             }`}
           >
-            <MessageSquare className={`w-4 h-4 flex-shrink-0 transition-colors ${activeThreadId === thread.id ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"}`} />
-            <span className="truncate text-left font-medium">{thread.title || "New Thread"}</span>
-          </button>
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <MessageSquare className={`w-4 h-4 flex-shrink-0 transition-colors ${activeThreadId === thread.id ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"}`} />
+              <span className="truncate text-left font-medium">{thread.title || "New Thread"}</span>
+            </div>
+            {onDeleteThread && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteThread(thread.id);
+                }}
+                className={`flex-shrink-0 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/20 hover:text-red-400 ${activeThreadId === thread.id ? "text-zinc-400" : "text-zinc-500"}`}
+                title="Delete thread"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         ))}
         {threads.length === 0 && (
           <div className="px-3 py-8 text-center">

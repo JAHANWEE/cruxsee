@@ -152,6 +152,17 @@ export default function ChatPage() {
     }
   }
 
+  async function handleDeleteThread(threadId: string) {
+    if (!userId) return;
+    await trpcMutate("thread.delete", { threadId });
+    if (activeThreadId === threadId) {
+      setActiveThreadId(null);
+      setMessages([]);
+      setToolCalls([]);
+    }
+    trpcQuery("thread.list", { userId }).then(setThreads);
+  }
+
   if (isPending) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#09090b]">
@@ -179,6 +190,7 @@ export default function ChatPage() {
         activeThreadId={activeThreadId}
         onSelectThread={setActiveThreadId}
         onNewThread={handleNewThread}
+        onDeleteThread={handleDeleteThread}
       />
       <div className="flex-1 flex flex-col relative h-full">
         {/* Subtle background glow effect */}
