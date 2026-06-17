@@ -177,7 +177,7 @@ export default function ChatPage() {
         <div className="text-center space-y-6">
           <h1 className="text-4xl font-light tracking-tight">Cruxsee</h1>
           <p className="text-zinc-400">Sign in to access your workspace.</p>
-          <button onClick={() => signIn.social({ provider: "google", callbackURL: "/" })} className="inline-block px-6 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-zinc-200 transition-colors">Sign In</button>
+          <button onClick={() => signIn.social({ provider: "google", callbackURL: window.location.origin + "/chat" })} className="inline-block px-6 py-2 bg-white text-black rounded-full text-sm font-medium hover:bg-zinc-200 transition-colors">Sign In</button>
         </div>
       </div>
     );
