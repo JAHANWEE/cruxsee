@@ -87,8 +87,9 @@ export async function sendMessage(threadId: string, userContent: string): Promis
 
 /**
  * Approve a tool call: execute it, save result, then continue the conversation.
+ * tenantId is the authenticated user's ID — enforced by the caller, not the LLM.
  */
-export async function approveToolCall(toolCallId: string): Promise<AgentResponse> {
+export async function approveToolCall(toolCallId: string, tenantId: string): Promise<AgentResponse> {
   // Get the tool call
   const [toolCall] = await db
     .select()
@@ -97,6 +98,12 @@ export async function approveToolCall(toolCallId: string): Promise<AgentResponse
 
   if (!toolCall) throw new Error("Tool call not found");
   if (toolCall.status !== "waiting_confirmation") throw new Error("Tool call not in waiting state");
+
+  // Verify ownership: tool call must belong to a thread owned by this user
+  const [thread] = await db.select().from(threadsTable).where(eq(threadsTable.id, toolCall.threadId));
+  if (!thread || thread.userId !== tenantId) {
+    throw new Error("Unauthorized: tool call does not belong to this user");
+  }
 
   // Mark as running atomically to prevent race condition on double-click
   const [updated] = await db.update(toolCallsTable)
@@ -108,8 +115,8 @@ export async function approveToolCall(toolCallId: string): Promise<AgentResponse
     throw new Error("Tool call was already approved or is running");
   }
 
-  // Execute the tool
-  const result = await executeTool(toolCall.toolName, toolCall.input as Record<string, unknown>);
+  // Execute the tool with enforced tenant context
+  const result = await executeTool(toolCall.toolName, toolCall.input as Record<string, unknown>, tenantId);
 
   // Mark as completed
   await db.update(toolCallsTable).set({
@@ -133,7 +140,6 @@ export async function approveToolCall(toolCallId: string): Promise<AgentResponse
 
   const stillWaiting = pendingCalls.filter((tc) => tc.status === "waiting_confirmation");
   if (stillWaiting.length > 0) {
-    // Still have pending approvals — don't call OpenAI yet
     return { type: "message", content: `Tool "${toolCall.toolName}" executed. Waiting for other approvals.` };
   }
 
@@ -145,7 +151,7 @@ export async function approveToolCall(toolCallId: string): Promise<AgentResponse
     tools: toolDefinitions,
   });
 
-  return handleOpenAIResponse(toolCall.threadId, toolCall.threadId /* we don't have userContent, pass threadId or just skip title update */, completion);
+  return handleOpenAIResponse(toolCall.threadId, "", completion);
 }
 
 /**

@@ -33,6 +33,9 @@ importers:
       '@repo/corsair':
         specifier: workspace:*
         version: link:../../packages/corsair
+      '@repo/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@repo/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -54,6 +57,9 @@ importers:
       corsair:
         specifier: ^0.1.0
         version: 0.1.76
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       express:
         specifier: ^5.2.1
         version: 5.2.1
