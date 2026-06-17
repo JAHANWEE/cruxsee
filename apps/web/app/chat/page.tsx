@@ -31,14 +31,14 @@ export interface ToolCall {
   output: Record<string, unknown> | null;
 }
 
-async function trpcQuery(path: string, input: Record<string, unknown>) {
-  const params = new URLSearchParams({ input: JSON.stringify(input) });
+async function trpcQuery(path: string, input?: Record<string, unknown>) {
+  const params = input ? new URLSearchParams({ input: JSON.stringify(input) }) : new URLSearchParams();
   const res = await fetch(`${API_URL}/trpc/${path}?${params}`, { credentials: "include" });
   const data = await res.json();
   return data.result?.data;
 }
 
-async function trpcMutate(path: string, input: Record<string, unknown>) {
+async function trpcMutate(path: string, input?: Record<string, unknown>) {
   const res = await fetch(`${API_URL}/trpc/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -62,7 +62,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!userId) return;
-    trpcQuery("thread.list", { userId }).then(setThreads);
+    trpcQuery("thread.list").then(setThreads);
   }, [userId]);
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function ChatPage() {
 
   async function handleNewThread() {
     if (!userId) return;
-    const thread = await trpcMutate("thread.create", { userId });
+    const thread = await trpcMutate("thread.create");
     setThreads((prev) => [thread, ...prev]);
     setActiveThreadId(thread.id);
     setMessages([]);
@@ -160,7 +160,7 @@ export default function ChatPage() {
       setMessages([]);
       setToolCalls([]);
     }
-    trpcQuery("thread.list", { userId }).then(setThreads);
+    trpcQuery("thread.list").then(setThreads);
   }
 
   if (isPending) {

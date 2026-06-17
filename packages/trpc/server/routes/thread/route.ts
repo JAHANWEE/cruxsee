@@ -1,32 +1,34 @@
 import { z } from "zod";
 import { db, eq, desc } from "@repo/database";
 import { threadsTable, messagesTable, toolCallsTable } from "@repo/database/schema";
-import { publicProcedure, router } from "../../trpc";
+import { protectedProcedure, router } from "../../trpc";
 
 export const threadRouter = router({
-  create: publicProcedure
-    .input(z.object({ userId: z.string() }))
-    .mutation(async ({ input }) => {
+  create: protectedProcedure
+    .mutation(async ({ ctx }) => {
       const [thread] = await db.insert(threadsTable).values({
-        userId: input.userId,
+        userId: ctx.user.id,
       }).returning();
       return thread;
     }),
 
-  list: publicProcedure
-    .input(z.object({ userId: z.string() }))
-    .query(async ({ input }) => {
+  list: protectedProcedure
+    .query(async ({ ctx }) => {
       const threads = await db
         .select()
         .from(threadsTable)
-        .where(eq(threadsTable.userId, input.userId))
+        .where(eq(threadsTable.userId, ctx.user.id))
         .orderBy(desc(threadsTable.updatedAt));
       return threads;
     }),
 
-  messages: publicProcedure
+  messages: protectedProcedure
     .input(z.object({ threadId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      // Validate thread ownership
+      const [thread] = await db.select().from(threadsTable).where(eq(threadsTable.id, input.threadId));
+      if (!thread || thread.userId !== ctx.user.id) throw new Error("Unauthorized");
+      
       const messages = await db
         .select()
         .from(messagesTable)
@@ -35,9 +37,13 @@ export const threadRouter = router({
       return messages;
     }),
 
-  toolCalls: publicProcedure
+  toolCalls: protectedProcedure
     .input(z.object({ threadId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      // Validate thread ownership
+      const [thread] = await db.select().from(threadsTable).where(eq(threadsTable.id, input.threadId));
+      if (!thread || thread.userId !== ctx.user.id) throw new Error("Unauthorized");
+
       const calls = await db
         .select()
         .from(toolCallsTable)
@@ -46,9 +52,13 @@ export const threadRouter = router({
       return calls;
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(z.object({ threadId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // Validate thread ownership
+      const [thread] = await db.select().from(threadsTable).where(eq(threadsTable.id, input.threadId));
+      if (!thread || thread.userId !== ctx.user.id) throw new Error("Unauthorized");
+
       await db.delete(threadsTable).where(eq(threadsTable.id, input.threadId));
       return { success: true };
     }),

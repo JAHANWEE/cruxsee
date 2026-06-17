@@ -9,6 +9,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@repo/auth": "workspace:*",
     "@repo/database": "workspace:*",
     "@repo/services": "workspace:*",
     "@trpc/client": "^11.8.1",

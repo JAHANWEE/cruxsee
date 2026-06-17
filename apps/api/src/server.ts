@@ -36,6 +36,7 @@ app.use(express.json());
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
 import { generateOAuthUrl, processOAuthCallback } from "corsair/oauth";
+import { auth } from "@repo/auth";
 
 const REDIRECT_URI = `${env.BASE_URL}/api/corsair/authCallback`;
 const pendingStates = new Set<string>();
@@ -46,11 +47,16 @@ const PLUGIN_SCOPES: Record<string, string[]> = {
 };
 
 app.get("/api/corsair/connect", async (req, res) => {
-  const tenantId = req.query.tenantId as string;
+  const session = await auth.api.getSession({ headers: new Headers(req.headers as Record<string, string>) });
+  if (!session?.user?.id) {
+    return res.status(401).send("Unauthorized");
+  }
+  
+  const tenantId = session.user.id;
   const plugin = req.query.plugin as string;
 
-  if (!tenantId || !plugin) {
-    return res.status(400).send("Missing tenantId or plugin");
+  if (!plugin) {
+    return res.status(400).send("Missing plugin");
   }
 
   try {
@@ -59,6 +65,7 @@ app.get("/api/corsair/connect", async (req, res) => {
     const { url, state } = await generateOAuthUrl(corsair, plugin, {
       tenantId,
       redirectUri: REDIRECT_URI,
+      loginHint: session.user.email,
       ...(scopes && { scopes })
     });
     pendingStates.add(state);
