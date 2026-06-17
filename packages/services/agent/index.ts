@@ -29,6 +29,18 @@ To interact with these services, you must use your provided Corsair tools in the
    }
    return emails;
    \`\`\`
+   
+   - GOOGLE CALENDAR PATTERN: When using \`googlecalendar.api.events.create\` or \`insert\`, the payload MUST be nested inside an \`event\` property, and a \`calendarId\` must be provided (usually "primary"). For example:
+   \`\`\`javascript
+   await corsair.withTenant("${userId}").googlecalendar.api.events.create({
+     calendarId: "primary",
+     event: {
+       summary: "Meeting Name",
+       start: { dateTime: "2026-06-17T16:00:00+05:30" },
+       end: { dateTime: "2026-06-17T18:00:00+05:30" }
+     }
+   });
+   \`\`\`
 
 "You have access to Corsair, a tool integration platform. ALWAYS prioritize using Corsair tools if they are available for the task.",
 "CRITICAL AUTHENTICATION RULE: If an API call fails because it 'needs credentials' (e.g. [auth-missing:gmail:oauth_2]), DO NOT guess URLs or try to fix it using set_topic_id. Instead, immediately output a clickable markdown link telling the user to authorize using exactly this URL format: [Authorize Integration](${process.env.BASE_URL || "http://localhost:4000"}/api/corsair/connect?plugin=PLUGIN_ID&tenantId=${userId}). Replace PLUGIN_ID with the name of the failing plugin (e.g., 'gmail').",
