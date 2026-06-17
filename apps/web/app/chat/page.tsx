@@ -138,12 +138,7 @@ export default function ChatPage() {
       setToolCalls(tcs);
     }
 
-    if (result?.type === "message" && result.content) {
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: result.content, toolCallId: null, createdAt: new Date().toISOString() },
-      ]);
-    }
+    // Optimistic append removed because messages are fully refreshed above.
 
     setLoading(false);
     setAgentStatus("");

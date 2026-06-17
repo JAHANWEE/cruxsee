@@ -84,68 +84,60 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, loading,
 
       <div ref={bottomRef} className="h-4" />
 
-      {/* Modern Tool Approval Card */}
+      {/* Modern Tool Approval Card - Inline instead of absolute */}
       {hasPendingTools && activeToolCall && (
-        <div className="absolute bottom-6 left-0 right-0 px-4 md:px-8 z-50 flex justify-center">
-          <div className="w-full max-w-2xl bg-white dark:bg-[#18181b] backdrop-blur-2xl border border-zinc-200 dark:border-white/10 rounded-2xl p-4 shadow-2xl ring-1 ring-black/5 dark:ring-white/5 animate-in slide-in-from-bottom-8 fade-in duration-300">
-            
+        <div className="flex items-start gap-4 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-zinc-900 dark:bg-white flex items-center justify-center shadow-sm mt-1">
+            <svg className="w-4 h-4 text-white dark:text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0 pt-1">
             {(() => {
               const { title, color, icon } = getActionDetails(activeToolCall);
               const isShowingDetails = showDetails[activeToolCall.id];
               
               return (
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full bg-${color}-50 dark:bg-${color}-500/10 flex items-center justify-center flex-shrink-0 ring-1 ring-${color}-500/20`}>
-                        {icon}
-                      </div>
-                      <div>
-                        <h3 className="text-base font-semibold text-zinc-900 dark:text-white">{title}</h3>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 mt-0.5">
-                          <ShieldAlert className="w-3.5 h-3.5" />
-                          Requires your approval
-                        </p>
-                      </div>
+                <div className="flex flex-col gap-3 items-start">
+                  <div className="flex items-center gap-2 text-zinc-900 dark:text-zinc-100 font-medium text-[15px]">
+                    <div className={`w-6 h-6 rounded-full bg-${color}-50 dark:bg-${color}-500/10 flex items-center justify-center flex-shrink-0 ring-1 ring-${color}-500/20`}>
+                      {icon}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onReject(activeToolCall.id)}
-                        disabled={loading}
-                        className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Reject"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => onApprove(activeToolCall.id)}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white dark:bg-white dark:text-black font-medium text-sm rounded-full transition-all shadow-md hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Check className="w-4 h-4 stroke-[2.5]" />
-                        Approve
-                      </button>
-                    </div>
+                    <span>{title}</span>
                   </div>
-                  
-                  {/* Expandable Details */}
-                  <div className="mt-1 border-t border-zinc-100 dark:border-white/5 pt-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onApprove(activeToolCall.id)}
+                      disabled={loading}
+                      className="flex items-center gap-1.5 px-4 py-1.5 bg-zinc-900 text-white dark:bg-white dark:text-black font-medium text-xs rounded-full transition-all shadow-sm hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => onReject(activeToolCall.id)}
+                      disabled={loading}
+                      className="flex items-center gap-1.5 px-4 py-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-xs rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Reject
+                    </button>
                     <button 
                       onClick={() => toggleDetails(activeToolCall.id)}
-                      className="flex items-center gap-2 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors"
+                      className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors rounded-full"
+                      title="View details"
                     >
-                      <Code className="w-3.5 h-3.5" />
-                      {isShowingDetails ? "Hide advanced details" : "Show advanced details"}
+                      <Code className="w-4 h-4" />
                     </button>
-                    
-                    {isShowingDetails && (
-                      <div className="mt-3 bg-zinc-50 dark:bg-black/40 rounded-xl p-4 overflow-x-auto ring-1 ring-zinc-200 dark:ring-white/5 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <pre className="text-[11px] text-zinc-600 dark:text-zinc-400 font-mono leading-relaxed">
-                          {JSON.stringify(activeToolCall.input, null, 2)}
-                        </pre>
-                      </div>
-                    )}
                   </div>
+                  
+                  {isShowingDetails && (
+                    <div className="w-full max-w-2xl mt-1 bg-zinc-50 dark:bg-black/40 rounded-xl p-4 overflow-x-auto ring-1 ring-zinc-200 dark:ring-white/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <pre className="text-[11px] text-zinc-600 dark:text-zinc-400 font-mono leading-relaxed">
+                        {JSON.stringify(activeToolCall.input, null, 2)}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -180,7 +172,7 @@ function MessageBubble({ message }: { message: Message }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       </div>
-      <div className="flex-1 min-w-0 prose prose-zinc dark:prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-50 dark:prose-pre:bg-black/50 prose-pre:ring-1 prose-pre:ring-zinc-200 dark:prose-pre:ring-white/10 prose-pre:rounded-xl max-w-none text-[15px] text-zinc-800 dark:text-zinc-200 pt-1">
+      <div className="flex-1 min-w-0 prose prose-zinc dark:prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-50 dark:prose-pre:bg-black/50 prose-pre:ring-1 prose-pre:ring-zinc-200 dark:prose-pre:ring-white/10 prose-pre:rounded-xl max-w-none text-base font-medium text-zinc-900 dark:text-zinc-100 pt-1">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {message.content || ""}
         </ReactMarkdown>
