@@ -45,4 +45,11 @@ export const threadRouter = router({
         .orderBy(toolCallsTable.createdAt);
       return calls;
     }),
+
+  delete: publicProcedure
+    .input(z.object({ threadId: z.string() }))
+    .mutation(async ({ input }) => {
+      await db.delete(threadsTable).where(eq(threadsTable.id, input.threadId));
+      return { success: true };
+    }),
 });
