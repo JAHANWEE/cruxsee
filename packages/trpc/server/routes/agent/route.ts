@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { sendMessage, approveToolCall, rejectToolCall } from "@repo/services/agent";
-import { protectedProcedure, router } from "../../trpc";
+import { rateLimitedProcedure, protectedProcedure, router } from "../../trpc";
 import { db, eq } from "@repo/database";
 import { threadsTable, toolCallsTable } from "@repo/database/schema";
 
 export const agentRouter = router({
-  send: protectedProcedure
+  send: rateLimitedProcedure
     .input(z.object({
       threadId: z.string(),
       content: z.string().min(1),
@@ -17,17 +17,15 @@ export const agentRouter = router({
       return sendMessage(input.threadId, input.content);
     }),
 
-  approveToolCall: protectedProcedure
+  approveToolCall: rateLimitedProcedure
     .input(z.object({ toolCallId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      // Ownership is verified inside approveToolCall via tenantId
       return approveToolCall(input.toolCallId, ctx.user.id);
     }),
 
   rejectToolCall: protectedProcedure
     .input(z.object({ toolCallId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      // Verify ownership: tool_call → thread → user
       const [toolCall] = await db.select().from(toolCallsTable).where(eq(toolCallsTable.id, input.toolCallId));
       if (!toolCall) throw new Error("Tool call not found");
       
