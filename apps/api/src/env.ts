@@ -8,6 +8,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_GMAIL_TOPIC_ID: z.string().optional(),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {

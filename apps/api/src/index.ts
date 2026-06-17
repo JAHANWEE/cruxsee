@@ -14,6 +14,7 @@ async function init() {
           gmail: {
             client_id: env.GOOGLE_CLIENT_ID,
             client_secret: env.GOOGLE_CLIENT_SECRET,
+            topic_id: env.GOOGLE_GMAIL_TOPIC_ID || (env.NODE_ENV === "development" ? "projects/cruxsee/topics/gmail-dev" : undefined),
           },
           googlecalendar: {
             client_id: env.GOOGLE_CLIENT_ID,

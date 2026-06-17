@@ -40,6 +40,11 @@ import { generateOAuthUrl, processOAuthCallback } from "corsair/oauth";
 const REDIRECT_URI = `${env.BASE_URL}/api/corsair/authCallback`;
 const pendingStates = new Set<string>();
 
+const PLUGIN_SCOPES: Record<string, string[]> = {
+  gmail: ["https://mail.google.com/"],
+  googlecalendar: ["https://www.googleapis.com/auth/calendar"],
+};
+
 app.get("/api/corsair/connect", async (req, res) => {
   const tenantId = req.query.tenantId as string;
   const plugin = req.query.plugin as string;
@@ -49,9 +54,12 @@ app.get("/api/corsair/connect", async (req, res) => {
   }
 
   try {
+    const scopes = PLUGIN_SCOPES[plugin];
+
     const { url, state } = await generateOAuthUrl(corsair, plugin, {
       tenantId,
       redirectUri: REDIRECT_URI,
+      ...(scopes && { scopes })
     });
     pendingStates.add(state);
     res.redirect(url);
