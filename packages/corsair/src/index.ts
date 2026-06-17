@@ -21,8 +21,8 @@ export const corsair = createCorsair({
   kek: process.env.CORSAIR_KEK!,
   multiTenancy: true, // each user = tenant
   connect: {
-    baseUrl: process.env.BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
-    redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/chat`
+    baseUrl: process.env.BASE_URL ? `${process.env.BASE_URL}/api/corsair` : "http://localhost:4000/api/corsair",
+    redirectUri: process.env.BASE_URL ? `${process.env.BASE_URL}/api/corsair/authCallback` : "http://localhost:4000/api/corsair/authCallback"
   }
 });
 
