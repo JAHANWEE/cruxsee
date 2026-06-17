@@ -2,12 +2,14 @@ import { betterAuth } from "better-auth";
 import { Pool } from "pg";
 import { syncGoogleTokensToCorsair } from "@repo/corsair";
 
+const isProd = (process.env.NODE_ENV as string) === "production" || (process.env.NODE_ENV as string) === "prod";
+
 export const auth = betterAuth({
   baseURL: process.env.BASE_URL || "http://localhost:4000",
   advanced: {
     crossSubDomainCookies: {
-      enabled: process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod",
-      domain: process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod" ? ".cruxsee.in" : undefined,
+      enabled: isProd,
+      domain: isProd ? ".cruxsee.in" : undefined,
     },
   },
   databaseHooks: {
