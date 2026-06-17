@@ -55,14 +55,20 @@ importers:
         specifier: ^2.8.5
         version: 2.8.5
       corsair:
-        specifier: ^0.1.0
+        specifier: ^0.1.76
         version: 0.1.76
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.11.1)(kysely@0.28.17)(pg@8.16.3)
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      pg:
+        specifier: ^8.16.3
+        version: 8.16.3
       trpc-to-openapi:
         specifier: ^3.1.0
         version: 3.1.0(@trpc/server@11.8.1(typescript@5.9.3))(zod-openapi@5.4.5(zod@4.3.5))(zod@4.3.5)
@@ -308,6 +314,9 @@ importers:
 
   packages/auth:
     dependencies:
+      '@repo/corsair':
+        specifier: workspace:*
+        version: link:../corsair
       better-auth:
         specifier: ^1.2.0
         version: 1.6.18(@prisma/client@5.22.0)(better-sqlite3@12.11.1)(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.11.1)(kysely@0.29.2)(pg@8.16.3))(next@16.1.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(pg@8.16.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -340,7 +349,7 @@ importers:
         specifier: ^0.1.0
         version: 0.1.22(openai@6.42.0(zod@4.3.5))
       corsair:
-        specifier: ^0.1.0
+        specifier: ^0.1.76
         version: 0.1.76
       pg:
         specifier: ^8.16.3
@@ -490,6 +499,9 @@ importers:
       '@repo/auth':
         specifier: workspace:*
         version: link:../auth
+      '@repo/corsair':
+        specifier: workspace:*
+        version: link:../corsair
       '@repo/database':
         specifier: workspace:*
         version: link:../database
@@ -502,6 +514,9 @@ importers:
       '@trpc/server':
         specifier: ^11.8.1
         version: 11.8.1(typescript@5.9.3)
+      better-auth:
+        specifier: ^1.2.0
+        version: 1.6.18(@prisma/client@5.22.0)(better-sqlite3@12.11.1)(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.11.1)(kysely@0.29.2)(pg@8.16.3))(next@16.1.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(pg@8.16.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       trpc-to-openapi:
         specifier: ^3.1.0
         version: 3.1.0(@trpc/server@11.8.1(typescript@5.9.3))(zod-openapi@5.4.5(zod@4.3.5))(zod@4.3.5)
@@ -5528,6 +5543,11 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  semver@7.8.4:
+    resolution: {integrity: sha512-rUCObTnP32Q08R2uuIrt7r9PlEonuTmtuXYcW6s5kjdlj3xbnwe+21yXptAUYcMAABLkYYTtnmzb3w3EDZfueA==}
+    engines: {node: '>=10'}
+    hasBin: true
+
   send@0.19.2:
     resolution: {integrity: sha512-VMbMxbDeehAxpOtWJXlcUS5E8iXh6QmN+BkRX1GARS3wRaXEEgzCcB10gTQazO42tpNIya8xIyNx8fll1OFPrg==}
     engines: {node: '>= 0.8.0'}
@@ -9073,7 +9093,6 @@ snapshots:
       better-sqlite3: 12.11.1
       kysely: 0.28.17
       pg: 8.16.3
-    optional: true
 
   drizzle-orm@0.45.1(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.11.1)(kysely@0.29.2)(pg@8.16.3):
     optionalDependencies:
@@ -10995,7 +11014,7 @@ snapshots:
 
   node-abi@3.92.0:
     dependencies:
-      semver: 7.7.3
+      semver: 7.8.4
     optional: true
 
   node-int64@0.4.0: {}
@@ -11596,6 +11615,9 @@ snapshots:
   semver@6.3.1: {}
 
   semver@7.7.3: {}
+
+  semver@7.8.4:
+    optional: true
 
   send@0.19.2:
     dependencies:

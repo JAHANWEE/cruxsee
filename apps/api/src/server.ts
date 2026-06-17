@@ -1,9 +1,10 @@
 import "dotenv/config";
 import express from "express";
 import crypto from "node:crypto";
+import { sql } from "drizzle-orm";
 import { logger } from "@repo/logger";
 import cors from "cors";
-import { toNodeHandler } from "better-auth/node";
+import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
 import { auth } from "@repo/auth";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -51,25 +52,24 @@ const PLUGIN_SCOPES: Record<string, string[]> = {
 // OAuth state stored in the verification table (same one Better Auth uses)
 // Fields: id (state), identifier (userId), value (plugin), expiresAt
 async function storeOAuthState(state: string, userId: string, plugin: string): Promise<void> {
-  await db.execute({
-    sql: `INSERT INTO verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-    params: [state, userId, plugin, new Date(Date.now() + 10 * 60 * 1000)] // 10 min TTL
-  } as any);
+  await db.execute(
+    sql`INSERT INTO verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt") VALUES (${state}, ${userId}, ${plugin}, ${new Date(Date.now() + 10 * 60 * 1000)}, NOW(), NOW())`
+  );
 }
 
 async function consumeOAuthState(state: string): Promise<{ userId: string; plugin: string } | null> {
-  const result = await db.execute({
-    sql: `DELETE FROM verification WHERE id = $1 AND "expiresAt" > NOW() RETURNING identifier, value`,
-    params: [state]
-  } as any);
-  const row = (result as any).rows?.[0];
-  if (!row) return null;
+  const result = await db.execute(
+    sql`DELETE FROM verification WHERE id = ${state} AND "expiresAt" > NOW() RETURNING identifier, value`
+  );
+  
+  const row = (result as any).rows?.[0] || (Array.isArray(result) ? result[0] : result);
+  if (!row || !row.identifier) return null;
   return { userId: row.identifier, plugin: row.value };
 }
 
 app.get("/api/corsair/connect", async (req, res) => {
   // Authenticated users only
-  const session = await auth.api.getSession({ headers: new Headers(req.headers as Record<string, string>) });
+  const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
   if (!session?.user?.id) {
     return res.status(401).json({ error: "Sign in first" });
   }
@@ -94,8 +94,8 @@ app.get("/api/corsair/connect", async (req, res) => {
 
     res.redirect(url);
   } catch (err: any) {
-    logger.error("Corsair connect failed", { error: err.message, plugin, userId: tenantId });
-    res.status(500).json({ error: "Failed to initiate connection" });
+    logger.error("Corsair connect failed", { error: err.message, stack: err.stack, plugin, userId: tenantId });
+    res.status(500).json({ error: "Failed to initiate connection", detail: err.message });
   }
 });
 

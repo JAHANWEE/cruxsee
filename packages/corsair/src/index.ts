@@ -7,23 +7,16 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-const googleConfig = {
-  clientId: process.env.GOOGLE_CLIENT_ID!,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-};
-
 export const corsair = createCorsair({
-  plugins: [
-    gmail(googleConfig as any), 
-    googlecalendar(googleConfig as any)
-  ],
+  plugins: [gmail(), googlecalendar()],
   database: pool,
   kek: process.env.CORSAIR_KEK!,
-  multiTenancy: true, // each user = tenant
+  multiTenancy: true,
   connect: {
     baseUrl: process.env.BASE_URL ? `${process.env.BASE_URL}/api/corsair` : "http://localhost:4000/api/corsair",
-    redirectUri: process.env.BASE_URL ? `${process.env.BASE_URL}/api/corsair/authCallback` : "http://localhost:4000/api/corsair/authCallback"
-  }
+    redirectUri: process.env.BASE_URL ? `${process.env.BASE_URL}/api/corsair/authCallback` : "http://localhost:4000/api/corsair/authCallback",
+  },
 });
 
 export { pool };
+export * from "./sync";

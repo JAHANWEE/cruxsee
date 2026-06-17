@@ -14,7 +14,7 @@
     "@corsair-dev/gmail": "^0.1.0",
     "@corsair-dev/googlecalendar": "^0.1.0",
     "@corsair-dev/mcp": "^0.1.0",
-    "corsair": "^0.1.0",
+    "corsair": "^0.1.76",
     "pg": "^8.16.3"
   }
 }

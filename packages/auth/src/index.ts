@@ -1,7 +1,26 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
+import { syncGoogleTokensToCorsair } from "@repo/corsair";
 
 export const auth = betterAuth({
+  databaseHooks: {
+    account: {
+      create: {
+        after: async (account) => {
+          if (account.providerId === "google") {
+            await syncGoogleTokensToCorsair(account.userId);
+          }
+        }
+      },
+      update: {
+        after: async (account) => {
+          if (account.providerId === "google") {
+            await syncGoogleTokensToCorsair(account.userId);
+          }
+        }
+      }
+    }
+  },
   database: new Pool({
     connectionString: process.env.DATABASE_URL,
   }),
@@ -12,6 +31,14 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      scope: [
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://mail.google.com/",
+        "https://www.googleapis.com/auth/calendar"
+      ],
+      accessType: "offline",
+      prompt: "select_account consent",
     },
   },
   trustedOrigins: [
