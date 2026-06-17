@@ -6,6 +6,7 @@ export const auth = betterAuth({
   baseURL: process.env.BASE_URL || "http://localhost:4000",
   advanced: {
     crossSubDomainCookies: {
+      enabled: process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod",
       domain: process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod" ? ".cruxsee.in" : undefined,
     },
   },
