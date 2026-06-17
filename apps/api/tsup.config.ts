@@ -2,13 +2,11 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: ["./src/index.ts"],
-  noExternal: [/^(?!@anthropic-ai\/claude-agent-sdk|@mastra\/core\/tools|@ai-sdk\/mcp|better-sqlite3|pg-native|^pg$).*$/],
+  noExternal: [/^(?!@anthropic-ai\/claude-agent-sdk|@mastra\/core\/tools|@ai-sdk\/mcp|better-sqlite3|pg-native).*$/],
   external: [
     "@anthropic-ai/claude-agent-sdk",
     "@mastra/core/tools",
     "@ai-sdk/mcp",
-    "pg",
-    "pg-pool",
   ],
   splitting: false,
   bundle: true,
