@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { db } from "@repo/database";
 import { messagesTable, toolCallsTable, threadsTable } from "@repo/database/schema";
-import { eq } from "@repo/database";
+import { eq, and } from "@repo/database";
 import { toolDefinitions, executeTool } from "./tools";
 
 const openai = new OpenAI({
@@ -86,8 +86,15 @@ export async function approveToolCall(toolCallId: string): Promise<AgentResponse
   if (!toolCall) throw new Error("Tool call not found");
   if (toolCall.status !== "waiting_confirmation") throw new Error("Tool call not in waiting state");
 
-  // Mark as running
-  await db.update(toolCallsTable).set({ status: "running" }).where(eq(toolCallsTable.id, toolCallId));
+  // Mark as running atomically to prevent race condition on double-click
+  const [updated] = await db.update(toolCallsTable)
+    .set({ status: "running" })
+    .where(and(eq(toolCallsTable.id, toolCallId), eq(toolCallsTable.status, "waiting_confirmation")))
+    .returning();
+
+  if (!updated) {
+    throw new Error("Tool call was already approved or is running");
+  }
 
   // Execute the tool
   const result = await executeTool(toolCall.toolName, toolCall.input as Record<string, unknown>);

@@ -111,14 +111,16 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, loading,
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => onReject(activeToolCall.id)}
-                        className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors"
+                        disabled={loading}
+                        className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Reject"
                       >
                         <X className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => onApprove(activeToolCall.id)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white dark:bg-white dark:text-black font-medium text-sm rounded-full transition-all shadow-md hover:scale-[1.02] active:scale-95"
+                        disabled={loading}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 text-white dark:bg-white dark:text-black font-medium text-sm rounded-full transition-all shadow-md hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Check className="w-4 h-4 stroke-[2.5]" />
                         Approve
