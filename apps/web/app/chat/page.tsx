@@ -149,14 +149,14 @@ export default function ChatPage() {
   }, [messages]);
 
   // Create thread + send message
-  function startNewChat(text: string) {
-    if (!text.trim() || chatStatus !== "ready") return;
+  function startNewChat(text: string, localActionContent?: string) {
+    if (!text.trim() && !localActionContent) return;
     const title = text.slice(0, 50) + (text.length > 50 ? "..." : "");
     fetch(`${API_URL}/api/threads`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title: title || "New Action" }),
     })
       .then((r) => r.json())
       .then((thread) => {
@@ -164,12 +164,44 @@ export default function ChatPage() {
         justCreatedRef.current = true;
         activeThreadRef.current = thread.id;
         setActiveThread(thread.id);
-        sendMessage({ text });
+        
+        if (localActionContent) {
+          setMessages([
+            { id: "local-user", role: "user", content: text, parts: [{ type: "text", text }] },
+            { id: "local-action", role: "assistant", content: localActionContent, parts: [{ type: "text", text: localActionContent }] }
+          ]);
+        } else {
+          sendMessage({ text });
+        }
       });
   }
 
-  function handleSend(content: string) {
-    if (!content.trim() || chatStatus !== "ready") return;
+  function handleSend(content: string, action?: "email" | "calendar" | "inbox") {
+    if (!content.trim() && !action) return;
+
+    if (action === "inbox") {
+      const msg = "Fetch my latest 5 emails from my inbox.";
+      if (!activeThread) startNewChat(msg);
+      else sendMessage({ text: msg });
+      return;
+    }
+
+    if (action === "email" || action === "calendar") {
+      const localActionContent = action === "email" ? "```email-action\n{}\n```" : "```calendar-action\n{}\n```";
+      const userText = action === "email" ? "Craft a mail" : "Schedule an event";
+      
+      if (!activeThread) {
+        startNewChat(userText, localActionContent);
+      } else {
+        setMessages(prev => [
+          ...prev, 
+          { id: Date.now().toString() + "1", role: "user", content: userText, parts: [{ type: "text", text: userText }] },
+          { id: Date.now().toString() + "2", role: "assistant", content: localActionContent, parts: [{ type: "text", text: localActionContent }] }
+        ]);
+      }
+      return;
+    }
+
     if (!activeThread) {
       startNewChat(content);
       return;
