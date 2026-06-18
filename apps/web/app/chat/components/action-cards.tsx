@@ -245,6 +245,7 @@ interface MessagePart {
 }
 
 export function renderMessageParts(text: string): MessagePart[] {
+  if (!text) return [];
   const blockRegex = /```(email-draft|email-action|calendar-event|calendar-action)\n([\s\S]*?)\n```/g;
   const parts: MessagePart[] = [];
   let lastIndex = 0;
