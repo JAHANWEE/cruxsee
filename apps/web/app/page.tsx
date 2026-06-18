@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
+import { signIn } from "~/lib/auth-client";
 import OceanBackground from "../components/OceanBackground";
 import "./landing.css";
 
@@ -61,9 +62,12 @@ export default function LandingPage() {
             <span className="brand-minimal-icon"></span>
             <span>cruxsee</span>
           </div>
-          <Link href="/sign-in" className="cta-button">
+          <button 
+            onClick={() => signIn.social({ provider: "google", callbackURL: window.location.origin + "/chat" })} 
+            className="cta-button"
+          >
             Sign In
-          </Link>
+          </button>
         </nav>
         
         <div className="scroll-indicator">
