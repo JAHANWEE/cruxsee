@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import { signIn } from "~/lib/auth-client";
 import OceanBackground from "../components/OceanBackground";
+import InteractiveChat from "../components/InteractiveChat";
 import "./landing.css";
 
 export default function LandingPage() {
@@ -121,53 +122,59 @@ export default function LandingPage() {
             </motion.div>
           </motion.div>
 
-          {/* Memory World */}
-          <motion.div className="environment env-memory" style={{ opacity: opMemory }}>
-            <motion.div style={{ y: memTextY, opacity: opMemory }}>
-              <h1 className="world-title" style={{ color: '#000' }}>Memory World<span className="world-subtitle">Ideas emerge from the clouds</span></h1>
+          {/* Memory World (The Interaction) */}
+          <motion.div className="environment env-memory flex flex-col items-center justify-center pt-4" style={{ opacity: opMemory }}>
+            <motion.div style={{ y: memTextY, opacity: opMemory, position: 'relative', zIndex: 20, marginBottom: '2rem' }}>
+              <h1 className="world-title" style={{ position: 'relative', top: 'auto', left: 'auto', transform: 'none', color: '#000', textShadow: '0 4px 30px rgba(255,255,255,0.6)', fontSize: '4vw' }}>
+                Conversational Workspace
+                <span className="world-subtitle" style={{ fontSize: '1.2vw', marginTop: '0.8rem' }}>Just ask. Cruxsee connects the dots.</span>
+              </h1>
             </motion.div>
-            <div className="ui-card" style={{ top: '60%', left: '20%', transform: 'rotate(-5deg)' }}>
-              <div style={{ color: '#000', fontSize: '0.9rem' }}>Project Notes</div>
-              <div style={{ width: '150px', height: '4px', background: 'rgba(0,0,0,0.1)', borderRadius: '2px' }}></div>
-              <div style={{ width: '100px', height: '4px', background: 'rgba(0,0,0,0.1)', borderRadius: '2px' }}></div>
-            </div>
-            <div className="ui-card" style={{ top: '20%', right: '15%', transform: 'rotate(8deg) scale(0.8)' }}>
-              <div style={{ color: '#000', fontSize: '0.9rem' }}>Meeting Sync</div>
+            <div className="relative z-10 w-full flex justify-center transform scale-90 origin-top">
+              <InteractiveChat />
             </div>
           </motion.div>
 
-          {/* Knowledge Universe */}
+          {/* Knowledge Universe (The Integrations) */}
           <motion.div className="environment env-knowledge" style={{ opacity: opKnowledge }}>
             <motion.div style={{ y: knoTextY, opacity: opKnowledge }}>
-              <h1 className="world-title" style={{ color: '#fff' }}>Knowledge Universe<span className="world-subtitle">Your brain, connected</span></h1>
+              <h1 className="world-title" style={{ color: '#fff' }}>Omniscient Memory<span className="world-subtitle">Gmail, Calendar, and Notes. All in one mind.</span></h1>
             </motion.div>
             <div className="particle" style={{ width: 4, height: 4, top: '40%', left: '30%', boxShadow: '0 0 10px white' }}></div>
             <div className="particle" style={{ width: 3, height: 3, top: '70%', left: '60%', boxShadow: '0 0 10px white' }}></div>
             <div className="particle" style={{ width: 5, height: 5, top: '20%', left: '80%', boxShadow: '0 0 10px white' }}></div>
           </motion.div>
 
-          {/* Workspace Dimension */}
+          {/* Workspace Dimension (The Execution) */}
           <motion.div className="environment env-workspace" style={{ opacity: opWorkspace }}>
             <motion.div style={{ y: workTextY, opacity: opWorkspace }}>
-              <h1 className="world-title" style={{ color: '#fff' }}>Workspace Dimension<span className="world-subtitle">Flow through your tasks</span></h1>
+              <h1 className="world-title" style={{ color: '#fff' }}>Stop Organizing. Start Doing.<span className="world-subtitle">Cruxsee doesn't just read. It acts on your behalf.</span></h1>
             </motion.div>
             <div className="ui-card" style={{ top: '30%', left: '10%', width: '300px', height: '200px', background: 'rgba(255,255,255,0.05)' }}>
-              <div style={{ color: '#fff', fontSize: '0.9rem' }}>Development</div>
+              <div style={{ color: '#fff', fontSize: '0.9rem', opacity: 0.8 }}>Email Sent Successfully</div>
               <div style={{ width: '100%', height: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px' }}></div>
+              <div style={{ width: '80%', height: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px' }}></div>
+            </div>
+            <div className="ui-card" style={{ bottom: '20%', right: '15%', width: '250px', height: '120px', background: 'rgba(255,255,255,0.05)' }}>
+              <div style={{ color: '#fff', fontSize: '0.9rem', opacity: 0.8 }}>Event Added to Calendar</div>
             </div>
           </motion.div>
 
-          {/* Daily Briefing */}
+          {/* Daily Briefing (The Clarity) */}
           <motion.div className="environment env-daily" style={{ opacity: opDaily }}>
-             <motion.div style={{ y: dailyTextY, opacity: opDaily }}>
-              <h1 className="world-title" style={{ color: '#333' }}>Daily Briefing<span className="world-subtitle">A peaceful morning view</span></h1>
+             <motion.div style={{ y: dailyTextY, opacity: opDaily, position: 'relative', zIndex: 20 }}>
+              <h1 className="world-title" style={{ color: '#000', textShadow: '0 4px 30px rgba(255,255,255,0.6)' }}>Zero Noise<span className="world-subtitle">Start your morning with absolute clarity.</span></h1>
             </motion.div>
+            <div className="ui-card absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 w-[400px] bg-white/40 border-white/40 shadow-xl z-10">
+              <div style={{ color: '#000', fontSize: '1rem', fontWeight: 500, opacity: 0.9 }}>Good morning.</div>
+              <div style={{ color: '#000', fontSize: '0.9rem', opacity: 0.6 }}>You have 2 important emails and 1 meeting today.</div>
+            </div>
           </motion.div>
 
-          {/* Research Galaxy */}
+          {/* Research Galaxy (The Horizon) */}
           <motion.div className="environment env-research" style={{ opacity: opResearch }}>
              <motion.div style={{ y: resTextY, opacity: opResearch }}>
-              <h1 className="world-title" style={{ color: '#fff' }}>Research Galaxy<span className="world-subtitle">Discover the unknown</span></h1>
+              <h1 className="world-title" style={{ color: '#fff' }}>Ready to see the Crux?<span className="world-subtitle">Join the future of work.</span></h1>
             </motion.div>
           </motion.div>
           
