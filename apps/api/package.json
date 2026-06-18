@@ -21,6 +21,9 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "^1.0.0",
+    "@ai-sdk/openai": "^3.0.0",
+    "@corsair-dev/mcp": "^0.1.22",
     "@repo/auth": "workspace:*",
     "@repo/corsair": "workspace:*",
     "@repo/database": "workspace:*",
@@ -28,12 +31,17 @@
     "@repo/trpc": "workspace:*",
     "@scalar/express-api-reference": "^0.8.30",
     "@trpc/server": "^11.8.1",
+    "ai": "^6.0.0",
     "better-auth": "^1.2.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "corsair": "^0.1.76",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
+    "p-limit": "^7.3.0",
     "pg": "^8.16.3",
     "trpc-to-openapi": "^3.1.0",
     "zod": "4.3.5"
