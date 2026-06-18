@@ -11,16 +11,18 @@ export const agentRouter = router({
       content: z.string().min(1),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Verify thread ownership
       const [thread] = await db.select().from(threadsTable).where(eq(threadsTable.id, input.threadId));
       if (!thread || thread.userId !== ctx.user.id) throw new Error("Unauthorized");
       return sendMessage(input.threadId, input.content);
     }),
 
   approveToolCall: rateLimitedProcedure
-    .input(z.object({ toolCallId: z.string() }))
+    .input(z.object({
+      toolCallId: z.string(),
+      overrideInput: z.record(z.string(), z.unknown()).optional(),
+    }))
     .mutation(async ({ input, ctx }) => {
-      return approveToolCall(input.toolCallId, ctx.user.id);
+      return approveToolCall(input.toolCallId, ctx.user.id, input.overrideInput);
     }),
 
   rejectToolCall: protectedProcedure
@@ -28,7 +30,7 @@ export const agentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const [toolCall] = await db.select().from(toolCallsTable).where(eq(toolCallsTable.id, input.toolCallId));
       if (!toolCall) throw new Error("Tool call not found");
-      
+
       const [thread] = await db.select().from(threadsTable).where(eq(threadsTable.id, toolCall.threadId));
       if (!thread || thread.userId !== ctx.user.id) throw new Error("Unauthorized");
 
