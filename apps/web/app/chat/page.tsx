@@ -7,7 +7,7 @@ import { useSession, signIn } from "~/lib/auth-client";
 import { Sidebar } from "../components/sidebar";
 import { Composer } from "../components/composer";
 import { CommandPalette } from "../components/command-palette";
-import { EmailActionCard, CalendarActionCard, renderMessageParts } from "./components/action-cards";
+import { EmailActionCard, CalendarActionCard, renderMessageParts, AINewsActionCard } from "./components/action-cards";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -183,7 +183,7 @@ export default function ChatPage() {
       });
   }
 
-  function handleSend(content: string, action?: "email" | "calendar" | "inbox") {
+  function handleSend(content: string, action?: "email" | "calendar" | "inbox" | "ainews") {
     if (!content.trim() && !action) return;
 
     if (action === "inbox") {
@@ -193,9 +193,20 @@ export default function ChatPage() {
       return;
     }
 
-    if (action === "email" || action === "calendar") {
-      const localActionContent = action === "email" ? "```email-action\n{}\n```" : "```calendar-action\n{}\n```";
-      const userText = action === "email" ? "Craft a mail" : "Schedule an event";
+    if (action === "email" || action === "calendar" || action === "ainews") {
+      let localActionContent = "";
+      let userText = "";
+      
+      if (action === "email") {
+        localActionContent = "```email-action\n{}\n```";
+        userText = "Craft a mail";
+      } else if (action === "calendar") {
+        localActionContent = "```calendar-action\n{}\n```";
+        userText = "Schedule an event";
+      } else if (action === "ainews") {
+        localActionContent = "```ainews-action\n{}\n```";
+        userText = "Fetch top 10 AI news";
+      }
       
       if (!activeThread) {
         startNewChat(userText, localActionContent);
@@ -388,6 +399,9 @@ export default function ChatPage() {
                                 }
                                 if (b.type === "email-draft" || b.type === "email-action") {
                                   return <div key={`${i}-${bi}`} className="w-full max-w-full"><EmailActionCard data={b.data} /></div>;
+                                }
+                                if (b.type === "ainews-action") {
+                                  return <div key={`${i}-${bi}`} className="w-full max-w-full"><AINewsActionCard /></div>;
                                 }
                                 if (b.type === "calendar-event" || b.type === "calendar-action") {
                                   return <div key={`${i}-${bi}`} className="w-full max-w-full"><CalendarActionCard data={b.data} /></div>;

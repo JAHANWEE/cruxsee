@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ArrowUp, Paperclip, Sparkles, Mail, Calendar, Square } from "lucide-react";
+import { ArrowUp, Paperclip, Sparkles, Mail, Calendar, Square, Newspaper } from "lucide-react";
 
 interface ComposerProps {
-  onSend: (content: string, action?: "email" | "calendar" | "inbox") => void;
+  onSend: (content: string, action?: "email" | "calendar" | "inbox" | "ainews") => void;
   disabled: boolean;
   isInitial?: boolean;
   onStop?: () => void;
@@ -130,6 +130,13 @@ export function Composer({ onSend, disabled, isInitial, onStop }: ComposerProps)
                 className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5"
               >
                 <Sparkles className="w-3 h-3 text-indigo-500" /> Read inbox
+              </button>
+              <button 
+                type="button"
+                onClick={() => onSend("Fetch top 10 AI news", "ainews")}
+                className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5"
+              >
+                <Newspaper className="w-3 h-3 text-indigo-500" /> AI News
               </button>
             </div>
           </div>

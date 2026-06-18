@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Send, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Send, Calendar, ExternalLink, Newspaper, Loader2 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -236,6 +236,93 @@ export function CalendarActionCard({ data }: { data: CalendarData }) {
   );
 }
 
+// ─── AI News Action Card ───
+
+export function AINewsActionCard() {
+  const [news, setNews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function fetchNews() {
+      try {
+        const topRes = await fetch("https://hacker-news.firebaseio.com/v0/topstories.json");
+        const topIds = await topRes.json();
+        const top10 = topIds.slice(0, 10);
+        
+        const stories = await Promise.all(
+          top10.map((id: number) => 
+            fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(res => res.json())
+          )
+        );
+        
+        setNews(stories || []);
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch news");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchNews();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="w-full max-w-lg rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] overflow-hidden shadow-sm flex flex-col items-center justify-center p-8">
+        <Loader2 className="w-6 h-6 text-indigo-500 animate-spin mb-4" />
+        <p className="text-sm text-zinc-500">Fetching latest AI news from HackerNews...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full max-w-lg p-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-sm">
+        {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-lg rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] overflow-hidden shadow-sm flex flex-col">
+      <div className="bg-zinc-50 dark:bg-zinc-800/50 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0">
+          <Newspaper className="w-4 h-4 text-indigo-500" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">HackerNews Frontpage</h3>
+          <p className="text-xs text-zinc-500">Top 10 stories right now</p>
+        </div>
+      </div>
+      <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800/50 max-h-[400px] overflow-y-auto scrollbar-hide">
+        {news.map((item, idx) => (
+          <a
+            key={item.id}
+            href={item.url || `https://news.ycombinator.com/item?id=${item.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col px-5 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors group"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h4 className="text-sm font-medium text-zinc-800 dark:text-zinc-200 leading-snug group-hover:text-indigo-500 transition-colors">
+                {idx + 1}. {item.title}
+              </h4>
+              <ExternalLink className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="flex items-center gap-3 mt-1.5 text-[11px] font-medium text-zinc-500">
+              <span className="text-orange-500/90">{item.score || 0} pts</span>
+              <span>•</span>
+              <span>{item.by}</span>
+              <span>•</span>
+              <span>{item.descendants || 0} comments</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Message parser (extracts action blocks from text) ───
 
 interface MessagePart {
@@ -246,7 +333,7 @@ interface MessagePart {
 
 export function renderMessageParts(text: string): MessagePart[] {
   if (!text) return [];
-  const blockRegex = /```(email-draft|email-action|calendar-event|calendar-action)\n([\s\S]*?)\n```/g;
+  const blockRegex = /```(email-draft|email-action|calendar-event|calendar-action|ainews-action)\n([\s\S]*?)\n```/g;
   const parts: MessagePart[] = [];
   let lastIndex = 0;
   let match;

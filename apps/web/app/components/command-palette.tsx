@@ -11,7 +11,7 @@ interface CommandPaletteProps {
   threads: Thread[];
   onSelectThread: (id: string) => void;
   onNewChat: () => void;
-  onTriggerAction: (action: "email" | "calendar" | "inbox") => void;
+  onTriggerAction: (action: "email" | "calendar" | "inbox" | "ainews") => void;
 }
 
 export function CommandPalette({ open, setOpen, threads, onSelectThread, onNewChat, onTriggerAction }: CommandPaletteProps) {
@@ -128,6 +128,12 @@ export function CommandPalette({ open, setOpen, threads, onSelectThread, onNewCh
                     className="flex items-center gap-3 px-3 py-2.5 mt-0.5 rounded-lg text-[15px] text-white/90 cursor-default aria-selected:bg-[#0058d0] aria-selected:text-white group transition-colors"
                   >
                     <Sparkles className="w-4 h-4 text-white/50 group-aria-selected:text-white transition-colors" /> Read Inbox
+                  </Command.Item>
+                  <Command.Item
+                    onSelect={() => { onTriggerAction("ainews"); setOpen(false); }}
+                    className="flex items-center gap-3 px-3 py-2.5 mt-0.5 rounded-lg text-[15px] text-white/90 cursor-default aria-selected:bg-[#0058d0] aria-selected:text-white group transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4 text-white/50 group-aria-selected:text-white transition-colors" /> AI News
                   </Command.Item>
                 </Command.Group>
 
