@@ -6,7 +6,7 @@ WORKDIR /app
 
 # ─── Dependencies ──────────────────────────────────────────────────────────
 FROM base AS deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/auth/package.json ./packages/auth/package.json
@@ -63,6 +63,7 @@ ENV PORT=4000
 
 COPY --from=api-builder /app/apps/api/dist ./dist
 COPY --from=api-builder /app/node_modules ./node_modules
+COPY --from=api-builder /app/apps/api/node_modules ./apps/api/node_modules
 
 EXPOSE 4000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
