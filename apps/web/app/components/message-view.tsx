@@ -45,9 +45,13 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, onEdit, 
   const isEmailSendCall = activeCode.includes("gmail.api.messages.send");
   const isCalendarCreateCall = activeCode.includes("googlecalendar.api.events.create");
   
-  // Extract email details from run_script code
-  const emailDraftFromCode = isEmailSendCall ? parseEmailFromCode(activeCode) : null;
-  const calendarEventFromCode = isCalendarCreateCall ? parseCalendarFromCode(activeCode) : null;
+  // Extract email details — prefer _emailMeta (from router), fallback to code parsing
+  const emailDraftFromCode = isEmailSendCall
+    ? (activeToolCall?.input as any)?._emailMeta || parseEmailFromCode(activeCode)
+    : null;
+  const calendarEventFromCode = isCalendarCreateCall
+    ? (activeToolCall?.input as any)?._calendarMeta || parseCalendarFromCode(activeCode)
+    : null;
 
   return (
     <div 
