@@ -142,11 +142,11 @@ export default function ChatPage() {
     }
   }
 
-  async function handleApprove(toolCallId: string) {
+  async function handleApprove(toolCallId: string, overrideInput?: Record<string, unknown>) {
     setLoading(true);
     setAgentStatus("Executing action...");
 
-    const result = await trpcMutate("agent.approveToolCall", { toolCallId });
+    const result = await trpcMutate("agent.approveToolCall", { toolCallId, overrideInput });
 
     if (activeThreadId) {
       const [msgs, tcs] = await Promise.all([

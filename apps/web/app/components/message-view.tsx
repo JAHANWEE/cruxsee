@@ -9,7 +9,7 @@ import type { Message, ToolCall } from "../chat/page";
 interface MessageViewProps {
   messages: Message[];
   toolCalls: ToolCall[];
-  onApprove: (toolCallId: string) => void;
+  onApprove: (toolCallId: string, overrideInput?: Record<string, unknown>) => void;
   onReject: (toolCallId: string) => void;
   onEdit?: (content: string) => void;
   loading: boolean;
