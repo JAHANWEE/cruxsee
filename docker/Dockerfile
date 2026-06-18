@@ -62,6 +62,7 @@ ENV NODE_ENV=prod
 ENV PORT=4000
 
 COPY --from=api-builder /app/apps/api/dist ./dist
+COPY --from=api-builder /app/node_modules ./node_modules
 
 EXPOSE 4000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \

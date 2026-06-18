@@ -1,6 +1,5 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
-import { syncGoogleTokensToCorsair } from "@repo/corsair";
 
 const isProd = (process.env.NODE_ENV as string) === "production" || (process.env.NODE_ENV as string) === "prod";
 
