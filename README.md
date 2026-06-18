@@ -1,123 +1,116 @@
-# Turborepo starter
+# Cruxsee ⚡️
 
-This Turborepo starter is maintained by the Turborepo core team.
+> **See the crux , ignore the fluff**
+>
+> Your AI operator for email, calendar, and everyday workflows. Think less. Execute faster.
 
-## Using this example
+Cruxsee is not just another chatbot. It is a production-grade **AI Operator Platform** designed to help you execute tasks directly from a sleek, keyboard-first interface. With an aesthetic inspired by Apple Spotlight and modern minimal design, Cruxsee lets you command your digital life with unprecedented speed.
 
-Run the following command:
+---
 
-```sh
-pnpm dlx create-turbo@latest
+## 🌟 Features
+
+- **Keyboard-First Command Palette:** Press `Cmd + K` anywhere to bring up a globally accessible, macOS Spotlight-style glassmorphic command palette. Instantly start a new chat, schedule events, or check HackerNews.
+- **Agentic Workflow Engine:** Instead of just chatting, Cruxsee uses advanced reasoning to execute external tools. It drafts emails, checks your calendar, and pulls live data directly into your workspace.
+- **Interactive Action Cards:** Tool executions are fully transparent. Whether it's drafting a Gmail, scheduling an event, or fetching the top 10 HackerNews stories, everything is rendered as beautiful, interactive UI cards.
+- **Human-in-the-Loop Confirmation:** Cruxsee never executes destructive or external actions autonomously. You always have full visibility and approval over emails sent or calendar invites dispatched.
+- **Markdown & Code Ready:** Beautiful markdown rendering with streaming support and syntax-highlighted code blocks for your technical queries.
+- **Lightning Fast UI:** Built with Next.js and Tailwind CSS, featuring micro-interactions, dark mode, and sleek animations that feel premium and responsive.
+
+---
+
+## 🏗 Architecture
+
+Cruxsee is built on a scalable **Turborepo** monorepo architecture, leveraging the best modern web technologies:
+
+- **Frontend:** Next.js, React, Tailwind CSS, Lucide Icons, `cmdk`
+- **Backend:** Node.js, tRPC (Optional/Legacy Starter), PostgreSQL
+- **ORM:** Prisma
+- **Authentication:** Better Auth (Google OAuth)
+- **Deployment:** Docker, Caddy (Reverse Proxy), GitHub Actions for CI/CD
+
+### Repository Structure
+```text
+cruxsee/
+├── apps/
+│   ├── web/        # Next.js Chat & Workspace interface
+│   └── landing/    # Marketing website (cruxsee.in)
+├── packages/
+│   ├── ui/         # Shared UI components
+│   ├── db/         # Prisma schema and database clients
+│   └── config/     # ESLint, TypeScript, and Tailwind configurations
+├── docker/         # Dockerfiles and docker-compose configurations
+└── .github/        # GitHub Actions for automated deployment
 ```
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
+## 🚀 Getting Started (Local Development)
 
-### Apps and Packages
+### Prerequisites
+- Node.js (v18+)
+- `pnpm` package manager
+- PostgreSQL database
+- Google Cloud Console Project (for OAuth keys)
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```sh
-cd my-turborepo
-
-# With global turbo installed (recommended)
-turbo build
-
-# Without global turbo, use pnpm
-pnpm exec turbo build
+### 1. Clone & Install Dependencies
+```bash
+git clone https://github.com/JAHANWEE/cruxsee.git
+cd cruxsee
+pnpm install
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+### 2. Environment Variables
+Create a `.env` file in the root of the project. You will need:
+```env
+# Database
+POSTGRES_PASSWORD=<your-db-password>
+DATABASE_URL="postgresql://user:password@localhost:5432/cruxsee"
 
-```sh
-# With global turbo installed (recommended)
-turbo build --filter=docs
+# Authentication
+BETTER_AUTH_SECRET=<random-secret-string> # Generate using: openssl rand -base64 32
+GOOGLE_CLIENT_ID=<from-google-console>
+GOOGLE_CLIENT_SECRET=<from-google-console>
 
-# Without global turbo, use pnpm
-pnpm exec turbo build --filter=docs
+# AI & Integrations
+OPENAI_API_KEY=<your-openai-key>
+CORSAIR_KEK=<32-byte-hex-encryption-key> # Generate using: openssl rand -hex 32
 ```
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```sh
-cd my-turborepo
-
-# With global turbo installed (recommended)
-turbo dev
-
-# Without global turbo, use pnpm
-pnpm exec turbo dev
+### 3. Database Setup
+Ensure your PostgreSQL instance is running, then push the Prisma schema to the database:
+```bash
+pnpm db:push
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```sh
-# With global turbo installed (recommended)
-turbo dev --filter=web
-
-# Without global turbo, use pnpm
-pnpm exec turbo dev --filter=web
+### 4. Run the Development Server
+```bash
+pnpm dev
 ```
+The workspace will be available at `http://localhost:3000`. 
 
-### Remote Caching
+*(Note: API backend will typically run on port `4000`. Ensure your Google OAuth Authorized Redirect URIs match your local ports).*
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+---
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+## 🛳 Production Deployment
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+Cruxsee is designed to be self-hosted on a Linux VM using Docker and Caddy as a reverse proxy. 
 
-```sh
-cd my-turborepo
+Deployment is entirely automated:
+1. `git push origin main`
+2. GitHub Actions builds the Docker images.
+3. The VM pulls the latest images via `docker-compose`.
+4. Caddy routes traffic seamlessly with automatic SSL.
 
-# With global turbo installed (recommended)
-turbo login
+---
 
-# Without global turbo, use pnpm
-pnpm exec turbo login
-```
+## 🤝 Philosophy
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+1. **High Signal-to-Noise Ratio:** We hide the clutter. If it isn't actionable or insightful, it's not on the screen.
+2. **Speed is a Feature:** The fewer clicks required, the better. Rely heavily on keyboard shortcuts.
+3. **Calm Aesthetic:** Deep blacks, subtle glassmorphism, and smooth typography. The tool should feel like an extension of your operating system.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+---
 
-```sh
-# With global turbo installed (recommended)
-turbo link
-
-# Without global turbo, use pnpm
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+*Cruxsee — Think less. Execute faster.*
