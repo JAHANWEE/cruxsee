@@ -62,25 +62,26 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
             Recent Chats
           </div>
         )}
-        {threads.map((thread) => (
+        {/* Hide recent chats when collapsed */}
+        {!collapsed && threads.map((thread) => (
           <div
             key={thread.id}
             className={`group relative w-full flex items-center gap-3 text-sm rounded-xl transition-all ${
               activeThreadId === thread.id
                 ? "bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-zinc-100 font-medium"
                 : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-800 dark:hover:text-zinc-200"
-            } ${collapsed ? "justify-center w-10 h-10 mx-auto px-0" : "justify-start px-3 py-2.5"}`}
+            } justify-start px-3 py-2.5`}
           >
             <div 
-              className={`flex items-center flex-1 min-w-0 cursor-pointer ${collapsed ? "justify-center gap-0" : "gap-3"}`}
+              className="flex items-center flex-1 min-w-0 cursor-pointer gap-3"
               onClick={() => onSelectThread(thread.id)}
               title={thread.title || "New Thread"}
             >
               <MessageSquare className={`w-4 h-4 shrink-0 transition-colors ${activeThreadId === thread.id ? "text-indigo-500" : ""}`} />
-              {!collapsed && <span className="truncate flex-1 text-left">{thread.title || "New Thread"}</span>}
+              <span className="truncate flex-1 text-left">{thread.title || "New Thread"}</span>
             </div>
 
-            {!collapsed && onDeleteThread && (
+            {onDeleteThread && (
               <div className="relative shrink-0 thread-menu-container">
                 <button
                   onClick={(e) => { 

@@ -107,6 +107,31 @@ export function Composer({ onSend, disabled, isInitial, onStop }: ComposerProps)
                 </div>
               )}
             </div>
+
+            {/* Action Pills */}
+            <div className="flex flex-wrap items-center gap-2 ml-2 hidden sm:flex">
+              <button 
+                type="button"
+                onClick={() => { setValue("Craft a mail"); if(textareaRef.current) textareaRef.current.focus(); }}
+                className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3 h-3 text-indigo-500" /> Craft a mail
+              </button>
+              <button 
+                type="button"
+                onClick={() => { setValue("Schedule an event"); if(textareaRef.current) textareaRef.current.focus(); }}
+                className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3 h-3 text-indigo-500" /> Schedule an event
+              </button>
+              <button 
+                type="button"
+                onClick={() => { setValue("Read inbox"); if(textareaRef.current) textareaRef.current.focus(); }}
+                className="px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3 h-3 text-indigo-500" /> Read inbox
+              </button>
+            </div>
           </div>
 
           {disabled ? (
