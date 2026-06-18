@@ -38,7 +38,7 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
       <div className="p-4 flex flex-col gap-2 mt-2">
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-auto"
+          className={`w-8 h-8 flex items-center justify-center rounded-xl hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ${collapsed ? "mx-auto" : "ml-auto"}`}
           title="Toggle Sidebar"
         >
           {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
@@ -46,7 +46,7 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
 
         <button
           onClick={onNewThread}
-          className={`flex items-center gap-3 px-4 py-3.5 bg-indigo-50/80 hover:bg-indigo-100/80 border border-indigo-100/50 dark:bg-indigo-500/20 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm mt-4 mx-2 ${collapsed ? "justify-center" : "justify-start"}`}
+          className={`flex items-center gap-3 bg-indigo-50/80 hover:bg-indigo-100/80 border border-indigo-100/50 dark:bg-indigo-500/20 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm mt-4 ${collapsed ? "w-10 h-10 p-0 justify-center mx-auto" : "px-4 py-3.5 mx-2 justify-start"}`}
           title="New Chat"
         >
           <div className="flex items-center justify-center shrink-0">
@@ -65,14 +65,14 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
         {threads.map((thread) => (
           <div
             key={thread.id}
-            className={`group relative w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-all ${
+            className={`group relative w-full flex items-center gap-3 text-sm rounded-xl transition-all ${
               activeThreadId === thread.id
                 ? "bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-zinc-100 font-medium"
                 : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-800 dark:hover:text-zinc-200"
-            } ${collapsed ? "justify-center" : "justify-start"}`}
+            } ${collapsed ? "justify-center w-10 h-10 mx-auto px-0" : "justify-start px-3 py-2.5"}`}
           >
             <div 
-              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+              className={`flex items-center flex-1 min-w-0 cursor-pointer ${collapsed ? "justify-center gap-0" : "gap-3"}`}
               onClick={() => onSelectThread(thread.id)}
               title={thread.title || "New Thread"}
             >
@@ -113,8 +113,8 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
       </div>
       
       {/* User profile */}
-      <div className="p-4 mt-auto border-t border-zinc-100 dark:border-zinc-800/50">
-        <div className={`flex items-center gap-3 px-2 py-2 ${collapsed ? "justify-center" : ""}`}>
+      <div className={`p-4 mt-auto border-t border-zinc-100 dark:border-zinc-800/50 ${collapsed ? "flex justify-center px-0" : ""}`}>
+        <div className={`flex items-center gap-3 ${collapsed ? "justify-center px-0 py-0" : "px-2 py-2"}`}>
           {session?.user?.image ? (
             <img src={session.user.image} alt="" className="w-8 h-8 rounded-full shrink-0 shadow-sm" />
           ) : (
