@@ -6,7 +6,13 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useSession, signIn } from "~/lib/auth-client";
 import { Sidebar } from "../components/sidebar";
 import { Composer } from "../components/composer";
+import { CommandPalette } from "../components/command-palette";
 import { EmailActionCard, CalendarActionCard, renderMessageParts } from "./components/action-cards";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Copy, RefreshCw, Volume2 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -60,6 +66,7 @@ export default function ChatPage() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThread, setActiveThread] = useState<string | null>(null);
   const [connectStatus, setConnectStatus] = useState<ConnectStatus>({ gmail: true, googlecalendar: true });
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Ref so the transport always picks up the latest thread
@@ -77,7 +84,7 @@ export default function ChatPage() {
     []
   );
 
-  const { messages, sendMessage, status: chatStatus, setMessages } = useChat({ transport });
+  const { messages, sendMessage, status: chatStatus, setMessages, regenerate } = useChat({ transport });
 
   // Load threads + check connect status on mount
   useEffect(() => {
@@ -214,6 +221,16 @@ export default function ChatPage() {
     setMessages([]);
   }
 
+  async function handleRenameThread(threadId: string, newTitle: string) {
+    setThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, title: newTitle } : t)));
+    await fetch(`${API_URL}/api/threads/${threadId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ title: newTitle }),
+    }).catch(() => {});
+  }
+
   async function handleDeleteThread(threadId: string) {
     setThreads((prev) => prev.filter((t) => t.id !== threadId));
     if (activeThread === threadId) {
@@ -260,12 +277,21 @@ export default function ChatPage() {
   // ─── Main Layout ───
   return (
     <div className="h-screen flex bg-background text-foreground font-sans overflow-hidden selection:bg-primary/20">
+      <CommandPalette 
+        open={commandPaletteOpen} 
+        setOpen={setCommandPaletteOpen} 
+        threads={threads} 
+        onSelectThread={setActiveThread} 
+        onNewChat={handleNewThread}
+        onTriggerAction={(action) => handleSend(action === "email" ? "Craft a mail" : action === "calendar" ? "Schedule an event" : "Fetch my latest 5 emails from my inbox.", action)}
+      />
       <ConnectModal status={connectStatus} onConnect={openConnectPopup} />
       <Sidebar
         threads={threads}
         activeThreadId={activeThread}
         onSelectThread={setActiveThread}
         onNewThread={handleNewThread}
+        onRenameThread={handleRenameThread}
         onDeleteThread={handleDeleteThread}
       />
       <div className="flex-1 flex flex-col relative h-full w-full">
@@ -277,8 +303,21 @@ export default function ChatPage() {
                 {messages.map((message) => (
                   <div key={message.id} className="animate-in fade-in slide-in-from-bottom-2 duration-200">
                     {message.role === "user" ? (
-                      <div className="flex justify-end">
-                        <div className="max-w-[75%] rounded-2xl rounded-br-sm px-4 py-2.5 bg-zinc-100 dark:bg-white/10">
+                      <div className="group/usermsg flex justify-end items-end gap-2 relative">
+                        {/* User Action Toolbar */}
+                        <div className="opacity-0 group-hover/usermsg:opacity-100 transition-opacity flex items-center mb-1">
+                          <button 
+                            onClick={() => {
+                              const text = message.parts?.find(p => p.type === "text")?.text || (message as any).content;
+                              if (text) navigator.clipboard.writeText(text);
+                            }} 
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors" 
+                            title="Copy prompt"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="max-w-[75%] rounded-2xl rounded-br-sm px-4 py-2.5 bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 transition-colors cursor-default shadow-sm hover:shadow-md transform hover:-translate-y-0.5 duration-200">
                           {(message.parts || [{ type: "text" as const, text: (message as any).content }]).map((part, i) => {
                             if (part.type === "text") return <p key={i} className="text-[15px] leading-relaxed whitespace-pre-wrap">{part.text}</p>;
                             return null;
@@ -286,7 +325,7 @@ export default function ChatPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex gap-3 max-w-[90%]">
+                      <div className="group/message flex gap-3 max-w-[90%]">
                         <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-1 bg-indigo-500/10 dark:bg-indigo-400/10">
                           <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">AI</span>
                         </div>
@@ -297,8 +336,53 @@ export default function ChatPage() {
                               return blocks.map((b, bi) => {
                                 if (b.type === "text" && b.content?.trim()) {
                                   return (
-                                    <div key={`${i}-${bi}`} className="rounded-2xl rounded-tl-sm px-5 py-3.5 bg-white dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
-                                      <div className="text-[15px] leading-relaxed whitespace-pre-wrap">{b.content.trim()}</div>
+                                    <div key={`${i}-${bi}`} className="w-full">
+                                      <div className="rounded-2xl rounded-tl-sm px-5 py-3.5 bg-white dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                                        <div className="text-[15px] leading-relaxed markdown-body">
+                                          <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                              code({ node, inline, className, children, ...props }: any) {
+                                                const match = /language-(\w+)/.exec(className || "");
+                                                return !inline && match ? (
+                                                  <SyntaxHighlighter
+                                                    style={oneDark as any}
+                                                    language={match[1]}
+                                                    PreTag="div"
+                                                    className="rounded-xl overflow-hidden my-4 text-sm"
+                                                    {...props}
+                                                  >
+                                                    {String(children).replace(/\n$/, "")}
+                                                  </SyntaxHighlighter>
+                                                ) : (
+                                                  <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-sm font-mono text-indigo-500" {...props}>
+                                                    {children}
+                                                  </code>
+                                                );
+                                              }
+                                            }}
+                                          >
+                                            {b.content.trim()}
+                                          </ReactMarkdown>
+                                        </div>
+                                      </div>
+                                      {/* Actions Toolbar */}
+                                      <div className="opacity-0 group-hover/message:opacity-100 transition-opacity flex items-center gap-1 mt-2 ml-2">
+                                        <button onClick={() => navigator.clipboard.writeText(b.content!.trim())} className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/10" title="Copy">
+                                          <Copy className="w-3.5 h-3.5" />
+                                        </button>
+                                        {i === (message.parts?.length || 1) - 1 && message.id === messages[messages.length - 1]?.id && regenerate && (
+                                          <button onClick={() => regenerate()} className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/10" title="Regenerate">
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
+                                        <button onClick={() => {
+                                          const u = new SpeechSynthesisUtterance(b.content!.trim());
+                                          window.speechSynthesis.speak(u);
+                                        }} className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/10" title="Read Aloud">
+                                          <Volume2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   );
                                 }

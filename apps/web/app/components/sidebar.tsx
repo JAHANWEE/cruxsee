@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Thread } from "../chat/page";
-import { Plus, MessageSquare, Search, LogOut, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Trash2 } from "lucide-react";
+import { Plus, MessageSquare, Search, LogOut, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Trash2, Pencil } from "lucide-react";
 import { signOut, useSession } from "~/lib/auth-client";
 
 interface SidebarProps {
@@ -10,13 +10,16 @@ interface SidebarProps {
   activeThreadId: string | null;
   onSelectThread: (id: string) => void;
   onNewThread: () => void;
+  onRenameThread?: (id: string, newTitle: string) => void;
   onDeleteThread?: (id: string) => void;
 }
 
-export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, onDeleteThread }: SidebarProps) {
+export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, onRenameThread, onDeleteThread }: SidebarProps) {
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -74,14 +77,45 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
           >
             <div 
               className="flex items-center flex-1 min-w-0 cursor-pointer gap-3"
-              onClick={() => onSelectThread(thread.id)}
+              onClick={() => {
+                if (editingThreadId !== thread.id) {
+                  onSelectThread(thread.id);
+                }
+              }}
               title={thread.title || "New Thread"}
             >
               <MessageSquare className={`w-4 h-4 shrink-0 transition-colors ${activeThreadId === thread.id ? "text-indigo-500" : ""}`} />
-              <span className="truncate flex-1 text-left">{thread.title || "New Thread"}</span>
+              
+              {editingThreadId === thread.id ? (
+                <input
+                  autoFocus
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={() => {
+                    if (onRenameThread && editTitle.trim() && editTitle !== thread.title) {
+                      onRenameThread(thread.id, editTitle.trim());
+                    }
+                    setEditingThreadId(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      if (onRenameThread && editTitle.trim() && editTitle !== thread.title) {
+                        onRenameThread(thread.id, editTitle.trim());
+                      }
+                      setEditingThreadId(null);
+                    } else if (e.key === "Escape") {
+                      setEditingThreadId(null);
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 bg-transparent border-none outline-none text-left w-full h-full p-0"
+                />
+              ) : (
+                <span className="truncate flex-1 text-left">{thread.title || "New Thread"}</span>
+              )}
             </div>
 
-            {onDeleteThread && (
+            {(onDeleteThread || onRenameThread) && (
               <div className="relative shrink-0 thread-menu-container">
                 <button
                   onClick={(e) => { 
@@ -95,16 +129,31 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
                 
                 {openMenuId === thread.id && (
                   <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg p-1 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <button
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        onDeleteThread(thread.id); 
-                        setOpenMenuId(null); 
-                      }}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" /> Delete
-                    </button>
+                    {onRenameThread && (
+                      <button
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setEditTitle(thread.title || "");
+                          setEditingThreadId(thread.id);
+                          setOpenMenuId(null); 
+                        }}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-lg transition-colors mb-1"
+                      >
+                        <Pencil className="w-4 h-4" /> Rename
+                      </button>
+                    )}
+                    {onDeleteThread && (
+                      <button
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          onDeleteThread(thread.id); 
+                          setOpenMenuId(null); 
+                        }}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
