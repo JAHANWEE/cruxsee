@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
+import OceanBackground from "../components/OceanBackground";
 import "./landing.css";
 
 export default function LandingPage() {
@@ -110,10 +111,9 @@ export default function LandingPage() {
         >
           {/* Ocean */}
           <motion.div className="environment env-ocean" style={{ opacity: opOcean }}>
-            <div className="particle" style={{ width: 100, height: 100, top: '20%', left: '10%', opacity: 0.2, filter: 'blur(30px)' }}></div>
-            <div className="particle" style={{ width: 300, height: 300, bottom: '-10%', right: '20%', background: '#ff7e5f', opacity: 0.3, filter: 'blur(50px)' }}></div>
-            <motion.div style={{ y: oceanTextY, opacity: oceanTextOpacity }}>
-              <h1 className="world-title">Cruxsee<span className="world-subtitle">An immersive AI workflow</span></h1>
+            <OceanBackground />
+            <motion.div style={{ y: oceanTextY, opacity: oceanTextOpacity, position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10 }}>
+              <h1 className="world-title" style={{ textShadow: '0 10px 40px rgba(0,0,0,0.8)' }}>Cruxsee<span className="world-subtitle">See the Crux, Ignore the fluff</span></h1>
             </motion.div>
           </motion.div>
 

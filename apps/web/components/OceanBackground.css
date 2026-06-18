@@ -1,0 +1,166 @@
+/* OceanBackground.css */
+
+.ocean-env-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* Richer orange, sunrise base */
+  background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 40%, #ffb380 70%, #ffecd2 100%);
+  pointer-events: none; /* Let clicks pass to canvas */
+}
+
+/* Base Gradient */
+.ocean-base-gradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 80%, rgba(255, 94, 58, 0.5) 0%, rgba(255, 149, 0, 0.2) 60%, transparent 100%);
+  z-index: 1;
+}
+
+/* Volumetric Light Blobs */
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: 2;
+  animation: float-blob 20s infinite alternate ease-in-out;
+  opacity: 0.6;
+}
+
+.blob-peach {
+  width: 70vw;
+  height: 70vh;
+  background: #ff5e3a; /* Deeper orange */
+  top: -10%;
+  left: -10%;
+  animation-delay: 0s;
+}
+
+.blob-champagne {
+  width: 60vw;
+  height: 60vh;
+  background: #ff9500; /* Rich sunset orange */
+  bottom: 10%;
+  right: -10%;
+  animation-delay: -5s;
+}
+
+.blob-blue {
+  width: 70vw;
+  height: 40vh;
+  background: #ffb380; /* Warm pastel orange instead of blue */
+  top: 30%;
+  left: 20%;
+  animation-delay: -10s;
+  opacity: 0.5;
+}
+
+@keyframes float-blob {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(10vw, 5vh) scale(1.1); }
+  100% { transform: translate(-5vw, 15vh) scale(0.9); }
+}
+
+/* Aurora Bands */
+.aurora {
+  position: absolute;
+  width: 150vw;
+  height: 40vh;
+  filter: blur(60px);
+  z-index: 3;
+  opacity: 0.8; /* Increased opacity for prominence */
+  border-radius: 100%;
+  transform-origin: center;
+  animation: wave-aurora 25s infinite linear;
+}
+
+.aurora-1 {
+  bottom: -5%;
+  left: -25vw;
+  /* Switched to vibrant, glowing auroras */
+  background: linear-gradient(90deg, rgba(255, 106, 0, 0.6), rgba(238, 9, 121, 0.5), rgba(255, 149, 0, 0.5));
+  animation-duration: 30s;
+}
+
+.aurora-2 {
+  bottom: 15%;
+  left: -10vw;
+  background: linear-gradient(90deg, rgba(255, 204, 0, 0.5), rgba(255, 94, 58, 0.6), rgba(255, 0, 128, 0.4));
+  animation-duration: 20s;
+  animation-direction: reverse;
+}
+
+@keyframes wave-aurora {
+  0% { transform: translateY(0) rotate(-5deg) scaleY(1); }
+  25% { transform: translateY(-5vh) rotate(0deg) scaleY(1.2); }
+  50% { transform: translateY(0) rotate(5deg) scaleY(1); }
+  75% { transform: translateY(5vh) rotate(0deg) scaleY(0.8); }
+  100% { transform: translateY(0) rotate(-5deg) scaleY(1); }
+}
+
+/* Light Ribbons */
+.light-ribbon {
+  position: absolute;
+  width: 200%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+  z-index: 4;
+  opacity: 0.3;
+  filter: blur(4px);
+  animation: ribbon-travel 15s infinite linear;
+}
+
+.ribbon-1 {
+  top: 40%;
+  transform: rotate(15deg);
+}
+
+.ribbon-2 {
+  top: 60%;
+  transform: rotate(-10deg);
+  animation-duration: 25s;
+  animation-direction: reverse;
+  opacity: 0.15;
+}
+
+@keyframes ribbon-travel {
+  0% { left: -100%; opacity: 0; }
+  10% { opacity: 0.5; }
+  90% { opacity: 0.5; }
+  100% { left: 100%; opacity: 0; }
+}
+
+/* Canvas Layer */
+.ocean-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto; /* Enable mouse tracking */
+}
+
+/* Noise Overlay */
+.ocean-noise {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Bottom Fade / Mystery */
+.ocean-bottom-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 30%;
+  z-index: 7;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(0, 20, 50, 0.8), rgba(0, 20, 50, 0.3) 40%, transparent 100%);
+}
