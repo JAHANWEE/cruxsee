@@ -2,19 +2,22 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: ["./src/index.ts"],
+  noExternal: [
+    // Bundle everything EXCEPT the externals below
+    /^(?!pg$|pg-pool$|pg-native$|better-sqlite3$|@ai-sdk\/mcp$|@ai-sdk\/openai$|@corsair-dev\/mcp$|@anthropic-ai\/claude-agent-sdk$|@mastra\/core).*$/,
+  ],
   external: [
-    // Native modules that can't be bundled
     "pg",
     "pg-pool",
     "pg-native",
-    // AI SDK packages with complex internals
+    "better-sqlite3",
     "@ai-sdk/mcp",
     "@ai-sdk/openai",
     "@corsair-dev/mcp",
-    // MCP transport needs Node streams
-    "better-sqlite3",
+    "@anthropic-ai/claude-agent-sdk",
+    "@mastra/core/tools",
+    "@mastra/core",
   ],
-  noExternal: [/.*/],
   splitting: false,
   bundle: true,
   outDir: "./dist",
