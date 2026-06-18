@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, X, Code, Cpu, Copy, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, X, Code, Cpu, Copy, RefreshCw, ChevronDown, ChevronUp, Pencil, ArrowDown } from "lucide-react";
 import type { Message, ToolCall } from "../chat/page";
 
 interface MessageViewProps {
@@ -11,16 +11,30 @@ interface MessageViewProps {
   toolCalls: ToolCall[];
   onApprove: (toolCallId: string) => void;
   onReject: (toolCallId: string) => void;
+  onEdit?: (content: string) => void;
   loading: boolean;
   agentStatus: string;
 }
 
-export function MessageView({ messages, toolCalls, onApprove, onReject, loading, agentStatus }: MessageViewProps) {
+export function MessageView({ messages, toolCalls, onApprove, onReject, onEdit, loading, agentStatus }: MessageViewProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const scrollToBottom = useCallback(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, toolCalls, loading]);
+    scrollToBottom();
+  }, [messages, toolCalls, loading, scrollToBottom]);
+
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    // Show button if we are scrolled up more than 100px from the bottom
+    setShowScrollButton(scrollHeight - scrollTop - clientHeight > 100);
+  };
 
   const pendingToolCalls = toolCalls.filter((tc) => tc.status === "waiting_confirmation");
   const hasPendingTools = pendingToolCalls.length > 0;
@@ -30,7 +44,11 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, loading,
   const isEmailDraftPending = isEmailSendCall && messages.some(m => m.content?.includes("```email-draft"));
 
   return (
-    <div className="flex-1 overflow-y-auto px-2 pt-8 pb-32 space-y-10 scrollbar-hide relative w-full">
+    <div 
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 overflow-y-auto px-2 pt-8 pb-32 space-y-10 scrollbar-hide relative w-full scroll-smooth"
+    >
       {messages.map((msg, idx) => {
         // Find if this message has associated tool calls (for now just matching by order/time roughly, or just attach active tool call to the last message)
         const isLast = idx === messages.length - 1;
@@ -41,24 +59,30 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, loading,
             activeToolCall={isLast ? activeToolCall : undefined}
             onApprove={onApprove}
             onReject={onReject}
+            onEdit={onEdit}
           />
         );
       })}
 
       {loading && agentStatus && !hasPendingTools && (
-        <div className="flex items-center gap-3 px-4 py-2 opacity-70 animate-in fade-in duration-500 w-full max-w-[760px] mx-auto">
-          <div className="flex gap-1.5">
-            <div className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <div className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <div className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+        <div className="w-full max-w-[760px] mx-auto animate-in fade-in duration-500">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary/50 to-accent/50 flex items-center justify-center shadow-md animate-pulse">
+              <svg className="w-4 h-4 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <div className="h-4 w-32 bg-primary/10 rounded-full animate-pulse" />
+              <div className="text-[11px] font-semibold tracking-widest text-secondary uppercase animate-pulse">{agentStatus}</div>
+            </div>
           </div>
-          <span className="text-xs font-semibold tracking-widest text-secondary uppercase">{agentStatus}</span>
         </div>
       )}
 
       {/* Global Tool Approval (if not attached to a message draft) */}
       {hasPendingTools && activeToolCall && !isEmailDraftPending && (
-        <div className="w-full max-w-[760px] mx-auto bg-glass-bg backdrop-blur-[40px] rounded-[28px] p-6 border border-glass-border shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="w-full max-w-[760px] mx-auto bg-glass-bg backdrop-blur-[40px] rounded-[28px] p-6 border border-orange-500/50 shadow-[0_0_20px_rgba(249,115,22,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -95,7 +119,38 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, loading,
       )}
 
       <div ref={bottomRef} className="h-4" />
+
+      {/* Smart Scroll to Bottom */}
+      <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 transition-all duration-300 z-30 ${showScrollButton ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"}`}>
+        <button
+          onClick={scrollToBottom}
+          className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-[#18181b]/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-full shadow-lg text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-foreground hover:bg-white dark:hover:bg-[#18181b] transition-all"
+        >
+          <ArrowDown className="w-4 h-4" /> New messages
+        </button>
+      </div>
     </div>
+  );
+}
+
+// Copy Code Button Component
+function CopyCodeButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={`absolute top-3 right-3 p-1.5 rounded-lg transition-all ${copied ? "bg-green-500/10 text-green-500" : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10"}`}
+      title="Copy code"
+    >
+      {copied ? <Check className="w-4 h-4 animate-in zoom-in duration-200" /> : <Copy className="w-4 h-4" />}
+    </button>
   );
 }
 
@@ -103,14 +158,18 @@ function MessageBubble({
   message, 
   activeToolCall, 
   onApprove, 
-  onReject 
+  onReject,
+  onEdit
 }: { 
   message: Message, 
   activeToolCall?: ToolCall, 
   onApprove: (id: string) => void, 
-  onReject: (id: string) => void 
+  onReject: (id: string) => void,
+  onEdit?: (content: string) => void
 }) {
   const [showFooter, setShowFooter] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(message.content || "");
 
   if (message.role === "tool" || (message.role === "assistant" && !message.content)) {
     return null;
@@ -119,8 +178,37 @@ function MessageBubble({
   const isUser = message.role === "user";
 
   if (isUser) {
+    if (isEditing) {
+      return (
+        <div className="flex justify-end w-full max-w-[800px] mx-auto animate-in fade-in zoom-in-95 duration-200">
+          <div className="w-[75%] p-4 rounded-[28px] bg-white dark:bg-[#18181b] border border-indigo-500/30 shadow-[0_8px_30px_rgba(99,102,241,0.08)]">
+            <textarea
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="w-full resize-none bg-transparent outline-none text-[15px] leading-[1.65] text-zinc-800 dark:text-zinc-100 scrollbar-hide min-h-[100px]"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2 mt-2">
+              <button onClick={() => setIsEditing(false)} className="px-4 py-1.5 rounded-full text-sm font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors">Cancel</button>
+              <button 
+                onClick={() => { setIsEditing(false); onEdit?.(editValue); }}
+                className="px-4 py-1.5 rounded-full text-sm font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition-colors shadow-md"
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex justify-end w-full max-w-[800px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="group flex justify-end w-full max-w-[800px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 relative">
+        <div className="flex items-center gap-2 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <button onClick={() => setIsEditing(true)} className="p-2 rounded-full text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors" title="Edit prompt">
+            <Pencil className="w-4 h-4" />
+          </button>
+        </div>
         <div className="max-w-[75%] px-6 py-4 rounded-[28px] bg-black/5 dark:bg-white/5 text-foreground text-[17px] leading-[1.65] border border-glass-border">
           {message.content}
         </div>
@@ -212,11 +300,14 @@ function MessageBubble({
               }
               
               return !inline ? (
-                <pre className={className} {...props}>
-                  <code className={className} {...props}>
-                    {children}
-                  </code>
-                </pre>
+                <div className="relative group">
+                  <CopyCodeButton text={String(children).replace(/\n$/, "")} />
+                  <pre className={className} {...props}>
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  </pre>
+                </div>
               ) : (
                 <code className={`bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded-md text-[0.9em] font-mono ${className}`} {...props}>
                   {children}

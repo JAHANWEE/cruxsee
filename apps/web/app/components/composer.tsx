@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { ArrowUp, Paperclip, Sparkles, Mail, Calendar } from "lucide-react";
+import { ArrowUp, Paperclip, Sparkles, Mail, Calendar, Square } from "lucide-react";
 
 interface ComposerProps {
   onSend: (content: string) => void;
   disabled: boolean;
   isInitial?: boolean;
+  onStop?: () => void;
 }
 
 const PLACEHOLDERS = [
@@ -17,7 +18,7 @@ const PLACEHOLDERS = [
   "Schedule a meeting..."
 ];
 
-export function Composer({ onSend, disabled, isInitial }: ComposerProps) {
+export function Composer({ onSend, disabled, isInitial, onStop }: ComposerProps) {
   const [value, setValue] = useState("");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
@@ -80,7 +81,7 @@ export function Composer({ onSend, disabled, isInitial }: ComposerProps) {
             placeholder={PLACEHOLDERS[placeholderIndex]}
             disabled={disabled}
             rows={1}
-            className={`flex-1 max-h-[200px] resize-none bg-transparent ${value ? "pl-1" : "pl-7"} text-[15px] leading-[1.65] outline-none text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 disabled:opacity-50 scrollbar-hide transition-all`}
+            className={`flex-1 max-h-[200px] resize-none bg-transparent ${value ? "pl-1" : "pl-7"} text-[15px] leading-[1.65] outline-none text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 disabled:opacity-50 scrollbar-hide transition-[height] duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)]`}
           />
         </div>
         
@@ -108,13 +109,24 @@ export function Composer({ onSend, disabled, isInitial }: ComposerProps) {
             </div>
           </div>
 
-          <button
-            onClick={handleSubmit}
-            disabled={disabled || !value.trim()}
-            className="flex items-center justify-center w-10 h-10 bg-indigo-500 text-white rounded-[14px] disabled:opacity-30 disabled:bg-indigo-500/50 transition-all hover:scale-105 active:scale-95 shadow-md"
-          >
-            <ArrowUp className="w-5 h-5 stroke-[2.5]" />
-          </button>
+          {disabled ? (
+            <button
+              onClick={onStop}
+              className="flex items-center justify-center w-10 h-10 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-[14px] transition-all hover:scale-105 active:scale-95 shadow-md animate-pulse"
+              title="Stop generating"
+            >
+              <Square className="w-4 h-4 fill-current" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!value.trim()}
+              className="flex items-center justify-center w-10 h-10 bg-indigo-500 text-white rounded-[14px] disabled:opacity-30 disabled:bg-indigo-500/50 transition-all hover:scale-105 active:scale-95 shadow-md"
+              title="Send message"
+            >
+              <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -200,6 +200,7 @@ export default function ChatPage() {
               toolCalls={toolCalls}
               onApprove={handleApprove}
               onReject={handleReject}
+              onEdit={handleSend}
               loading={loading}
               agentStatus={agentStatus}
             />
@@ -207,7 +208,7 @@ export default function ChatPage() {
               {/* Optional: Add a subtle fade gradient if you want the messages to fade behind the composer */}
               <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
               <div className="bg-background w-full pb-4 pt-2">
-                <Composer onSend={handleSend} disabled={loading} />
+                <Composer onSend={handleSend} disabled={loading} onStop={() => setLoading(false)} />
               </div>
             </div>
           </div>
