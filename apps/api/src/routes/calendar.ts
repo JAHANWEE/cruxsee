@@ -119,7 +119,10 @@ calendarRouter.post("/events", async (req, res) => {
     }
 
     logger.info("[calendar:create] sending to corsair", { eventData: JSON.stringify(eventData) });
-    const event = await tenant.googlecalendar.api.events.create({ event: eventData });
+    const event = await tenant.googlecalendar.api.events.create({
+      event: eventData,
+      sendUpdates: "all", // Send email notifications to all attendees
+    });
     await cache.delPattern(`cal:${session.user.id}:*`);
     res.json(event);
   } catch (err: any) {
@@ -139,7 +142,7 @@ calendarRouter.delete("/events/:id", async (req, res) => {
   try {
     await cache.blockId(session.user.id, req.params.id);
     const tenant = corsair.withTenant(session.user.id);
-    await tenant.googlecalendar.api.events.delete({ id: req.params.id });
+    await tenant.googlecalendar.api.events.delete({ id: req.params.id, sendUpdates: "all" });
     await cache.delPattern(`cal:${session.user.id}:*`);
     res.json({ ok: true });
   } catch (err: any) {
@@ -185,7 +188,11 @@ calendarRouter.put("/events/:id", async (req, res) => {
       eventData.end = { dateTime: toUTCISO(eventData.end.dateTime) };
     }
 
-    const event = await tenant.googlecalendar.api.events.update({ id: req.params.id, event: eventData });
+    const event = await tenant.googlecalendar.api.events.update({
+      id: req.params.id,
+      event: eventData,
+      sendUpdates: "all",
+    });
     await cache.delPattern(`cal:${session.user.id}:*`);
     res.json(event);
   } catch (err: any) {
