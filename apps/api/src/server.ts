@@ -27,9 +27,7 @@ import { env } from "./env";
 
 export const app = express();
 
-// ─── Security ────────────────────────────────────────────────────────────
-app.use(helmet());
-
+// ─── CORS (must be before helmet so preflight OPTIONS requests get proper headers) ───
 const isProd = env.NODE_ENV === "prod" || env.NODE_ENV === "production";
 app.use(
   cors({
@@ -42,6 +40,14 @@ app.use(
         ]
       : ["http://localhost:3000", "http://localhost:3001"],
     credentials: true,
+  })
+);
+
+// ─── Security (after CORS so preflight isn't blocked) ────────────────────
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "unsafe-none" },
   })
 );
 
