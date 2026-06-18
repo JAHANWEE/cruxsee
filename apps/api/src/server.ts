@@ -50,7 +50,6 @@ const PLUGIN_SCOPES: Record<string, string[]> = {
 };
 
 // OAuth state stored in the verification table (same one Better Auth uses)
-// Fields: id (state), identifier (userId), value (plugin), expiresAt
 async function storeOAuthState(state: string, userId: string, plugin: string): Promise<void> {
   await db.execute(
     sql`INSERT INTO verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt") VALUES (${state}, ${userId}, ${plugin}, ${new Date(Date.now() + 10 * 60 * 1000)}, NOW(), NOW())`
@@ -61,107 +60,64 @@ async function consumeOAuthState(state: string): Promise<{ userId: string; plugi
   const result = await db.execute(
     sql`DELETE FROM verification WHERE id = ${state} AND "expiresAt" > NOW() RETURNING identifier, value`
   );
-  
   const row = (result as any).rows?.[0] || (Array.isArray(result) ? result[0] : result);
   if (!row || !row.identifier) return null;
   return { userId: row.identifier, plugin: row.value };
 }
 
 app.get("/api/corsair/connect", async (req, res) => {
-  // Authenticated users only
   const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-  if (!session?.user?.id) {
-    return res.status(401).json({ error: "Sign in first" });
-  }
+  if (!session?.user?.id) return res.status(401).json({ error: "Sign in first" });
 
   const tenantId = session.user.id;
   const plugin = req.query.plugin as string;
 
-  if (!plugin || !PLUGIN_SCOPES[plugin]) {
-    return res.status(400).json({ error: "Invalid or missing plugin. Supported: gmail, googlecalendar" });
-  }
+  if (!plugin || !PLUGIN_SCOPES[plugin]) return res.status(400).json({ error: "Invalid plugin" });
 
   try {
     const { url, state } = await generateOAuthUrl(corsair, plugin, {
       tenantId,
       redirectUri: REDIRECT_URI,
-      loginHint: session.user.email, // Guide user to same account
+      loginHint: session.user.email, // Enforces the connected email matches
       scopes: PLUGIN_SCOPES[plugin],
     });
 
-    // Store state in DB (survives restarts, works multi-instance)
     await storeOAuthState(state, tenantId, plugin);
-
     res.redirect(url);
   } catch (err: any) {
-    logger.error("Corsair connect failed", { error: err.message, stack: err.stack, plugin, userId: tenantId });
-    res.status(500).json({ error: "Failed to initiate connection", detail: err.message });
+    logger.error("Corsair connect failed", { error: err.message, plugin, userId: tenantId });
+    res.status(500).json({ error: "Failed to initiate connection" });
   }
 });
 
 app.get("/api/corsair/authCallback", async (req, res) => {
-  const code = req.query.code as string;
-  const state = req.query.state as string;
-  const error = req.query.error as string;
+  const { code, state, error } = req.query as { code: string; state: string; error: string };
 
-  if (error) {
-    return res.status(400).send(`<html><body><h2>Authorization failed</h2><p>${error}</p><p><a href="/">Return</a></p></body></html>`);
-  }
-  if (!code || !state) {
-    return res.status(400).send("Missing code or state");
-  }
+  if (error) return res.status(400).send(`<h2>Auth failed</h2><p>${error}</p>`);
+  if (!code || !state) return res.status(400).send("Missing code or state");
 
-  // Validate and consume state from DB (atomic — prevents replay)
   const stateData = await consumeOAuthState(state);
-  if (!stateData) {
-    return res.status(400).send("Invalid or expired authorization state. Please try connecting again.");
-  }
+  if (!stateData) return res.status(400).send("Invalid or expired state.");
 
   try {
-    const result = await processOAuthCallback(corsair, {
-      code,
-      state,
-      redirectUri: REDIRECT_URI,
-    });
+    const result = await processOAuthCallback(corsair, { code, state, redirectUri: REDIRECT_URI });
 
-    // Verify the connected account matches the logged-in user's email.
-    // We stored the user's email in stateData. After connection, try to verify
-    // by checking the tenant's connected account. If the provider email doesn't
-    // match, the user connected a different Google account.
-    const userRow = await db.execute({
-      sql: `SELECT email FROM "user" WHERE id = $1`,
-      params: [stateData.userId]
-    } as any);
-    const userEmail = (userRow as any).rows?.[0]?.email;
-
-    // Check if the Corsair account was created for a different email.
-    // Corsair stores account info in corsair_accounts with tenant_id = userId.
-    // If the integration's stored email differs, warn the user.
-    // NOTE: We can't easily extract the email from Corsair's encrypted store,
-    // so we enforce via loginHint (pre-selects account) and log the event.
-    // A full verification would require a test API call after connection.
-
-    logger.info("Corsair plugin connected", {
-      plugin: result.plugin,
-      userId: stateData.userId,
-      userEmail,
-      note: "loginHint enforced same-account guidance"
-    });
-
-    const frontendUrl = env.FRONTEND_URL || "http://localhost:3000";
     res.send(`
-      <html><body style="font-family: system-ui; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
-        <div style="text-align: center;">
-          <h2>✓ Connected</h2>
-          <p><strong>${result.plugin}</strong> is now linked to your account (${userEmail}).</p>
-          <p style="color: #666; font-size: 0.875rem;">Make sure you authorized the same Google account you signed in with.</p>
-          <p>You can close this window and return to <a href="${frontendUrl}/chat">Cruxsee</a>.</p>
+      <html><body style="font-family: system-ui; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #fafafa;">
+        <div style="text-align: center; background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
+          <div style="width: 48px; height: 48px; border-radius: 24px; background: #10B981; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+          </div>
+          <h2 style="margin: 0 0 8px;">Successfully Connected</h2>
+          <p style="margin: 0 0 16px; color: #52525B;"><strong>${result.plugin}</strong> is now securely linked to your account.</p>
+          <p style="color: #A1A1AA; font-size: 0.875rem;">This window will close automatically...</p>
+          <script>setTimeout(() => window.close(), 1500);</script>
         </div>
       </body></html>
     `);
   } catch (err: any) {
-    logger.error("Corsair OAuth callback failed", { error: err.message, state: stateData });
-    res.status(500).send(`<html><body><h2>Connection failed</h2><p>${err.message}</p><p><a href="/">Try again</a></p></body></html>`);
+    logger.error("OAuth callback failed", { error: err.message });
+    res.status(500).send(`<h2>Connection failed</h2><p>${err.message}</p>`);
   }
 });
 

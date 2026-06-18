@@ -85,7 +85,20 @@ export default function ChatPage() {
   }
 
   async function handleSend(content: string) {
-    if (!activeThreadId || !content.trim()) return;
+    if (!content.trim()) return;
+
+    let targetThreadId = activeThreadId;
+
+    // Automatically create a thread if sending from the home page
+    if (!targetThreadId) {
+      if (!userId) return;
+      setLoading(true);
+      setAgentStatus("Starting thread...");
+      const thread = await trpcMutate("thread.create");
+      setThreads((prev) => [thread, ...prev]);
+      setActiveThreadId(thread.id);
+      targetThreadId = thread.id;
+    }
 
     const optimistic: Message = {
       id: crypto.randomUUID(),
@@ -98,28 +111,34 @@ export default function ChatPage() {
     setLoading(true);
     setAgentStatus("Thinking...");
 
-    const result = await trpcMutate("agent.send", { threadId: activeThreadId, content });
+    try {
+      const result = await trpcMutate("agent.send", { threadId: targetThreadId, content });
 
-    if (result?.type === "tool_calls") {
-      setAgentStatus("Waiting for approval...");
-      const [msgs, tcs] = await Promise.all([
-        trpcQuery("thread.messages", { threadId: activeThreadId }),
-        trpcQuery("thread.toolCalls", { threadId: activeThreadId }),
-      ]);
-      setMessages(msgs);
-      setToolCalls(tcs);
-    } else if (result?.type === "message") {
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: result.content, toolCallId: null, createdAt: new Date().toISOString() },
-      ]);
-    }
-
-    setLoading(false);
-    setAgentStatus("");
-
-    if (userId) {
-      trpcQuery("thread.list", { userId }).then(setThreads);
+      if (result?.type === "tool_calls") {
+        setAgentStatus("Waiting for approval...");
+        const [msgs, tcs] = await Promise.all([
+          trpcQuery("thread.messages", { threadId: targetThreadId }),
+          trpcQuery("thread.toolCalls", { threadId: targetThreadId }),
+        ]);
+        setMessages(msgs);
+        setToolCalls(tcs);
+      } else if (result?.type === "message") {
+        setMessages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), role: "assistant", content: result.content, toolCallId: null, createdAt: new Date().toISOString() },
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      // Remove the optimistic message on failure
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+    } finally {
+      setLoading(false);
+      setAgentStatus("");
+      
+      if (userId) {
+        trpcQuery("thread.list", { userId }).then(setThreads);
+      }
     }
   }
 

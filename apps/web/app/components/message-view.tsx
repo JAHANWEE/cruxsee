@@ -121,7 +121,7 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, onEdit, 
       <div ref={bottomRef} className="h-4" />
 
       {/* Smart Scroll to Bottom */}
-      <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 transition-all duration-300 z-30 ${showScrollButton ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"}`}>
+      <div className={`absolute bottom-6 left-1/2 -translate-x-1/2 transition-all duration-300 z-30 ${showScrollButton ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"}`}>
         <button
           onClick={scrollToBottom}
           className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-[#18181b]/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-full shadow-lg text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-foreground hover:bg-white dark:hover:bg-[#18181b] transition-all"
@@ -245,6 +245,28 @@ function MessageBubble({
         <ReactMarkdown 
           remarkPlugins={[remarkGfm]}
           components={{
+            a({ node, children, href, ...props }: any) {
+              if (href?.includes("/api/corsair/connect")) {
+                return (
+                  <a 
+                    href={href} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const width = 500;
+                      const height = 650;
+                      const left = window.screen.width / 2 - width / 2;
+                      const top = window.screen.height / 2 - height / 2;
+                      window.open(href, "CruxseeAuth", `width=${width},height=${height},left=${left},top=${top}`);
+                    }}
+                    className="text-indigo-500 hover:text-indigo-600 font-medium cursor-pointer underline decoration-indigo-500/30 underline-offset-4"
+                    {...props}
+                  >
+                    {children}
+                  </a>
+                );
+              }
+              return <a href={href} className="text-indigo-500 hover:underline" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
+            },
             code({ node, inline, className, children, ...props }: any) {
               const match = /language-([\w-]+)/.exec(className || "");
               const isEmailDraft = match && match[1] === "email-draft";
