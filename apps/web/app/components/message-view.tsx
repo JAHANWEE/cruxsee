@@ -163,7 +163,7 @@ function MessageBubble({
 }: { 
   message: Message, 
   activeToolCall?: ToolCall, 
-  onApprove: (id: string) => void, 
+  onApprove: (id: string, overrideInput?: Record<string, unknown>) => void, 
   onReject: (id: string) => void,
   onEdit?: (content: string) => void
 }) {
@@ -270,6 +270,7 @@ function MessageBubble({
             code({ node, inline, className, children, ...props }: any) {
               const match = /language-([\w-]+)/.exec(className || "");
               const isEmailDraft = match && match[1] === "email-draft";
+              const isCalendarEvent = match && match[1] === "calendar-event";
               
               if (!inline && isEmailDraft) {
                 let draftData = { to: "", subject: "", body: "" };
@@ -282,41 +283,77 @@ function MessageBubble({
                 const isPending = activeToolCall?.status === "waiting_confirmation" && 
                                  String((activeToolCall.input as any)?.code || "").includes("gmail.api.messages.send");
                 
+                if (isPending && activeToolCall) {
+                  // Use the editable EmailDraftCard
+                  const { EmailDraftCard } = require("./cards/email-draft");
+                  return (
+                    <div className="my-6 not-prose">
+                      <EmailDraftCard
+                        to={draftData.to}
+                        subject={draftData.subject}
+                        body={draftData.body}
+                        onSend={(edited: any) => {
+                          // Build updated run_script code with user's edits
+                          const originalCode = String((activeToolCall.input as any)?.code || "");
+                          const updatedCode = originalCode
+                            .replace(/to:\s*["'][^"']*["']/, `to: "${edited.to}"`)
+                            .replace(/subject:\s*["'][^"']*["']/, `subject: "${edited.subject}"`)
+                            .replace(/body:\s*["'][^"']*["']/, `body: "${edited.body.replace(/"/g, '\\"')}"`);
+                          onApprove(activeToolCall.id, { code: updatedCode });
+                        }}
+                        onDiscard={() => onReject(activeToolCall.id)}
+                        disabled={false}
+                      />
+                    </div>
+                  );
+                }
+                
+                // Already sent — show confirmation
+                const { EmailSentCard } = require("./cards/email-draft");
                 return (
-                  <div className="my-8 bg-background/50 rounded-2xl overflow-hidden border border-glass-border w-full not-prose shadow-sm">
-                    <div className="px-5 py-4 border-b border-glass-border flex items-center">
-                      <span className="text-secondary text-sm w-16 font-medium">To</span>
-                      <span className="text-sm font-medium px-3 py-1 bg-primary/10 text-primary rounded-full">{draftData.to}</span>
+                  <div className="my-6 not-prose">
+                    <EmailSentCard to={draftData.to} subject={draftData.subject} />
+                  </div>
+                );
+              }
+
+              if (!inline && isCalendarEvent) {
+                let eventData = { summary: "", startDateTime: "", endDateTime: "", attendees: [], location: "" };
+                try {
+                  eventData = JSON.parse(String(children).trim());
+                } catch (e) {
+                  console.error("Failed to parse calendar event JSON", e);
+                }
+
+                const isPending = activeToolCall?.status === "waiting_confirmation" &&
+                                 String((activeToolCall.input as any)?.code || "").includes("googlecalendar.api.events.create");
+
+                if (isPending && activeToolCall) {
+                  const { CalendarEventCard } = require("./cards/calendar-event");
+                  return (
+                    <div className="my-6 not-prose">
+                      <CalendarEventCard
+                        summary={eventData.summary}
+                        startDateTime={eventData.startDateTime}
+                        endDateTime={eventData.endDateTime}
+                        attendees={eventData.attendees}
+                        location={eventData.location}
+                        onConfirm={(edited: any) => {
+                          const originalCode = String((activeToolCall.input as any)?.code || "");
+                          // Pass the edited event data as override
+                          onApprove(activeToolCall.id, { code: originalCode });
+                        }}
+                        onCancel={() => onReject(activeToolCall.id)}
+                        disabled={false}
+                      />
                     </div>
-                    <div className="px-5 py-4 border-b border-glass-border flex items-center">
-                      <span className="text-secondary text-sm w-16 font-medium">Subject</span>
-                      <span className="text-sm font-medium text-foreground">{draftData.subject}</span>
-                    </div>
-                    <div className="p-5 min-h-[160px] text-[15px] whitespace-pre-wrap leading-[1.65] text-foreground/90">
-                      {draftData.body}
-                    </div>
-                    {isPending ? (
-                      <div className="bg-black/5 dark:bg-white/5 px-5 py-4 flex items-center justify-end gap-3 border-t border-glass-border">
-                        <button 
-                          onClick={() => activeToolCall && onReject(activeToolCall.id)}
-                          className="text-secondary hover:text-destructive text-sm font-medium transition-colors px-4 py-2"
-                        >
-                          Discard
-                        </button>
-                        <button 
-                          onClick={() => activeToolCall && onApprove(activeToolCall.id)}
-                          className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2.5 rounded-full text-sm font-semibold transition-all shadow-md hover:scale-105 active:scale-95"
-                        >
-                          Send Email
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="bg-black/5 dark:bg-white/5 px-5 py-4 border-t border-glass-border">
-                        <span className="text-xs font-semibold text-secondary uppercase tracking-widest flex items-center gap-2">
-                          <Check className="w-4 h-4 text-green-500" /> Dispatched
-                        </span>
-                      </div>
-                    )}
+                  );
+                }
+
+                const { CalendarEventCreatedCard } = require("./cards/calendar-event");
+                return (
+                  <div className="my-6 not-prose">
+                    <CalendarEventCreatedCard summary={eventData.summary} startDateTime={eventData.startDateTime} />
                   </div>
                 );
               }
