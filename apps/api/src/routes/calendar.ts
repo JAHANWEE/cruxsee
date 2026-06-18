@@ -86,7 +86,30 @@ calendarRouter.post("/events", async (req, res) => {
     }
 
     const tenant = corsair.withTenant(session.user.id);
-    const event = await tenant.googlecalendar.api.events.create({ event: parsed.data });
+
+    // Normalize: unwrap if body came as { event: { ... } } (prevent double-nesting with Corsair API)
+    let eventData: any = parsed.data;
+    if (eventData.event && typeof eventData.event === "object") {
+      // If the top level has an 'event' key that contains the actual event data, unwrap it
+      const inner = eventData.event;
+      if (inner.summary || inner.start || inner.end) {
+        eventData = inner;
+      }
+    }
+
+    // Normalize start/end — Google Calendar needs { dateTime: "full ISO string with timezone" }
+    if (typeof eventData.start === "string") {
+      eventData.start = { dateTime: new Date(eventData.start).toISOString() };
+    } else if (eventData.start?.dateTime && !eventData.start.dateTime.includes("Z") && !eventData.start.dateTime.match(/[+-]\d{2}:\d{2}$/)) {
+      eventData.start = { dateTime: new Date(eventData.start.dateTime).toISOString() };
+    }
+    if (typeof eventData.end === "string") {
+      eventData.end = { dateTime: new Date(eventData.end).toISOString() };
+    } else if (eventData.end?.dateTime && !eventData.end.dateTime.includes("Z") && !eventData.end.dateTime.match(/[+-]\d{2}:\d{2}$/)) {
+      eventData.end = { dateTime: new Date(eventData.end.dateTime).toISOString() };
+    }
+
+    const event = await tenant.googlecalendar.api.events.create({ event: eventData });
     await cache.delPattern(`cal:${session.user.id}:*`);
     res.json(event);
   } catch (err: any) {
@@ -129,7 +152,29 @@ calendarRouter.put("/events/:id", async (req, res) => {
     }
 
     const tenant = corsair.withTenant(session.user.id);
-    const event = await tenant.googlecalendar.api.events.update({ id: req.params.id, event: parsed.data });
+
+    // Normalize: unwrap if body came as { event: { ... } }
+    let eventData: any = parsed.data;
+    if (eventData.event && typeof eventData.event === "object") {
+      const inner = eventData.event;
+      if (inner.summary || inner.start || inner.end) {
+        eventData = inner;
+      }
+    }
+
+    // Normalize start/end
+    if (typeof eventData.start === "string") {
+      eventData.start = { dateTime: new Date(eventData.start).toISOString() };
+    } else if (eventData.start?.dateTime && !eventData.start.dateTime.includes("Z") && !eventData.start.dateTime.match(/[+-]\d{2}:\d{2}$/)) {
+      eventData.start = { dateTime: new Date(eventData.start.dateTime).toISOString() };
+    }
+    if (typeof eventData.end === "string") {
+      eventData.end = { dateTime: new Date(eventData.end).toISOString() };
+    } else if (eventData.end?.dateTime && !eventData.end.dateTime.includes("Z") && !eventData.end.dateTime.match(/[+-]\d{2}:\d{2}$/)) {
+      eventData.end = { dateTime: new Date(eventData.end.dateTime).toISOString() };
+    }
+
+    const event = await tenant.googlecalendar.api.events.update({ id: req.params.id, event: eventData });
     await cache.delPattern(`cal:${session.user.id}:*`);
     res.json(event);
   } catch (err: any) {

@@ -134,16 +134,20 @@ export function CalendarActionCard({ data }: { data: CalendarData }) {
     setCreating(true);
     setError("");
     try {
+      // Ensure proper ISO format with timezone (Google Calendar requires it)
+      const startISO = new Date(start).toISOString();
+      const endISO = new Date(end).toISOString();
+
       const res = await fetch(`${API_URL}/api/calendar/events`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           summary,
-          start: { dateTime: start },
-          end: { dateTime: end },
-          description,
-          attendees: data.guests?.map((email) => ({ email })),
+          start: { dateTime: startISO },
+          end: { dateTime: endISO },
+          description: description || undefined,
+          attendees: data.guests?.length ? data.guests.map((email) => ({ email })) : undefined,
         }),
       });
       const result = await res.json();
