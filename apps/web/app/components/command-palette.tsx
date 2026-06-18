@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Command } from "cmdk";
-import { Plus, MessageSquare, Sparkles, X } from "lucide-react";
+import { Plus, MessageSquare, Sparkles, Folder, Layers, FileText, AppWindow } from "lucide-react";
 import type { Thread } from "../chat/page";
 
 interface CommandPaletteProps {
@@ -15,6 +15,8 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ open, setOpen, threads, onSelectThread, onNewChat, onTriggerAction }: CommandPaletteProps) {
+  const [search, setSearch] = useState("");
+
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -26,80 +28,128 @@ export function CommandPalette({ open, setOpen, threads, onSelectThread, onNewCh
     return () => document.removeEventListener("keydown", down);
   }, [setOpen]);
 
+  // Handle closing when mouse moves away from the box
+  useEffect(() => {
+    if (!open) return;
+
+    let isActive = false;
+    // Wait 300ms before enforcing the mouse-out rule to prevent accidental closures right after opening
+    const timer = setTimeout(() => {
+      isActive = true;
+    }, 300);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isActive) return;
+      const palette = document.getElementById("command-palette-inner");
+      if (!palette) return;
+
+      const rect = palette.getBoundingClientRect();
+      const padding = 200; // safe zone in pixels
+
+      if (
+        e.clientX < rect.left - padding ||
+        e.clientX > rect.right + padding ||
+        e.clientY < rect.top - padding ||
+        e.clientY > rect.bottom + padding
+      ) {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [open, setOpen]);
+
+  useEffect(() => {
+    if (!open) {
+      setSearch("");
+    }
+  }, [open]);
+
   return (
     <Command.Dialog
       open={open}
       onOpenChange={setOpen}
       label="Global Command Menu"
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] sm:pt-[20vh] px-4 backdrop-blur-sm bg-zinc-900/40"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4 bg-transparent"
     >
-      <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center px-4 border-b border-zinc-100 dark:border-zinc-800">
-          <SearchIcon className="w-5 h-5 text-zinc-400 shrink-0" />
-          <Command.Input 
-            autoFocus 
-            placeholder="Type a command or search..." 
-            className="flex-1 px-3 py-4 bg-transparent outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 text-[15px]" 
-          />
-          <button 
-            onClick={() => setOpen(false)} 
-            className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+      <div className="w-full flex justify-center">
+        <div 
+          id="command-palette-inner"
+          className={`w-full max-w-[680px] bg-[#3a3a3c]/70 backdrop-blur-[60px] border border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] flex flex-col animate-in fade-in zoom-in-95 duration-200 transition-all ${search ? "rounded-2xl" : "rounded-full"}`}
+        >
+          {/* Top Pill Area */}
+          <div className="flex items-center px-4 py-2 relative">
+            <SearchIcon className="w-6 h-6 text-white/50 shrink-0 ml-2" />
+            <Command.Input 
+              autoFocus 
+              value={search}
+              onValueChange={setSearch}
+              placeholder="Spotlight Search" 
+              className="flex-1 px-4 py-3 bg-transparent outline-none text-white placeholder:text-white/50 text-[22px] font-light" 
+            />
+          </div>
 
-        <Command.List className="max-h-[350px] overflow-y-auto p-2 scrollbar-hide">
-          <Command.Empty className="py-6 text-center text-sm text-zinc-500">
-            No results found.
-          </Command.Empty>
+          {/* Results List - Only visible when searching or we can show suggestions */}
+          {search && (
+            <div className="border-t border-white/10">
+              <Command.List className="max-h-[400px] overflow-y-auto p-2 scrollbar-hide">
+                <Command.Empty className="py-10 text-center text-sm text-white/50">
+                  No results found.
+                </Command.Empty>
 
-          <Command.Group heading="Suggestions" className="px-2 text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1 mt-2">
-            <Command.Item
-              onSelect={() => { onNewChat(); setOpen(false); }}
-              className="flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer aria-selected:bg-zinc-100 dark:aria-selected:bg-white/10"
-            >
-              <Plus className="w-4 h-4 text-indigo-500" /> Start New Chat
-            </Command.Item>
-          </Command.Group>
+                <Command.Group heading="Suggestions" className="px-3 text-xs font-semibold text-white/40 uppercase tracking-wider mb-1 mt-2">
+                  <Command.Item
+                    onSelect={() => { onNewChat(); setOpen(false); }}
+                    className="flex items-center gap-3 px-3 py-2.5 mt-0.5 rounded-lg text-[15px] text-white/90 cursor-default aria-selected:bg-[#0058d0] aria-selected:text-white group transition-colors"
+                  >
+                    <Plus className="w-4 h-4 text-white/50 group-aria-selected:text-white transition-colors" /> Start New Chat
+                  </Command.Item>
+                </Command.Group>
 
-          <Command.Group heading="Quick Actions" className="px-2 text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1 mt-4">
-            <Command.Item
-              onSelect={() => { onTriggerAction("email"); setOpen(false); }}
-              className="flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer aria-selected:bg-zinc-100 dark:aria-selected:bg-white/10"
-            >
-              <Sparkles className="w-4 h-4 text-indigo-500" /> Craft an Email
-            </Command.Item>
-            <Command.Item
-              onSelect={() => { onTriggerAction("calendar"); setOpen(false); }}
-              className="flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer aria-selected:bg-zinc-100 dark:aria-selected:bg-white/10"
-            >
-              <Sparkles className="w-4 h-4 text-indigo-500" /> Schedule an Event
-            </Command.Item>
-            <Command.Item
-              onSelect={() => { onTriggerAction("inbox"); setOpen(false); }}
-              className="flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer aria-selected:bg-zinc-100 dark:aria-selected:bg-white/10"
-            >
-              <Sparkles className="w-4 h-4 text-indigo-500" /> Read Inbox
-            </Command.Item>
-          </Command.Group>
+                <Command.Group heading="Quick Actions" className="px-3 text-xs font-semibold text-white/40 uppercase tracking-wider mb-1 mt-4">
+                  <Command.Item
+                    onSelect={() => { onTriggerAction("email"); setOpen(false); }}
+                    className="flex items-center gap-3 px-3 py-2.5 mt-0.5 rounded-lg text-[15px] text-white/90 cursor-default aria-selected:bg-[#0058d0] aria-selected:text-white group transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4 text-white/50 group-aria-selected:text-white transition-colors" /> Craft an Email
+                  </Command.Item>
+                  <Command.Item
+                    onSelect={() => { onTriggerAction("calendar"); setOpen(false); }}
+                    className="flex items-center gap-3 px-3 py-2.5 mt-0.5 rounded-lg text-[15px] text-white/90 cursor-default aria-selected:bg-[#0058d0] aria-selected:text-white group transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4 text-white/50 group-aria-selected:text-white transition-colors" /> Schedule an Event
+                  </Command.Item>
+                  <Command.Item
+                    onSelect={() => { onTriggerAction("inbox"); setOpen(false); }}
+                    className="flex items-center gap-3 px-3 py-2.5 mt-0.5 rounded-lg text-[15px] text-white/90 cursor-default aria-selected:bg-[#0058d0] aria-selected:text-white group transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4 text-white/50 group-aria-selected:text-white transition-colors" /> Read Inbox
+                  </Command.Item>
+                </Command.Group>
 
-          {threads.length > 0 && (
-            <Command.Group heading="Recent Chats" className="px-2 text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1 mt-4">
-              {threads.map(thread => (
-                <Command.Item
-                  key={thread.id}
-                  value={thread.title || thread.id}
-                  onSelect={() => { onSelectThread(thread.id); setOpen(false); }}
-                  className="flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer aria-selected:bg-zinc-100 dark:aria-selected:bg-white/10"
-                >
-                  <MessageSquare className="w-4 h-4 text-zinc-400" /> 
-                  <span className="truncate">{thread.title || "New Thread"}</span>
-                </Command.Item>
-              ))}
-            </Command.Group>
+                {threads.length > 0 && (
+                  <Command.Group heading="Recent Chats" className="px-3 text-xs font-semibold text-white/40 uppercase tracking-wider mb-1 mt-4">
+                    {threads.map(thread => (
+                      <Command.Item
+                        key={thread.id}
+                        value={thread.title || thread.id}
+                        onSelect={() => { onSelectThread(thread.id); setOpen(false); }}
+                        className="flex items-center gap-3 px-3 py-2.5 mt-0.5 rounded-lg text-[15px] text-white/90 cursor-default aria-selected:bg-[#0058d0] aria-selected:text-white group transition-colors"
+                      >
+                        <MessageSquare className="w-4 h-4 text-white/50 group-aria-selected:text-white shrink-0 transition-colors" /> 
+                        <span className="truncate">{thread.title || "New Thread"}</span>
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                )}
+              </Command.List>
+            </div>
           )}
-        </Command.List>
+        </div>
       </div>
     </Command.Dialog>
   );
