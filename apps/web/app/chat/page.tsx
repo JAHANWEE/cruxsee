@@ -167,8 +167,8 @@ export default function ChatPage() {
         
         if (localActionContent) {
           setMessages([
-            { id: "local-user", role: "user", content: text, parts: [{ type: "text", text }] },
-            { id: "local-action", role: "assistant", content: localActionContent, parts: [{ type: "text", text: localActionContent }] }
+            { id: "local-user", role: "user", parts: [{ type: "text", text }] } as any,
+            { id: "local-action", role: "assistant", parts: [{ type: "text", text: localActionContent }] } as any
           ]);
         } else {
           sendMessage({ text });
@@ -195,8 +195,8 @@ export default function ChatPage() {
       } else {
         setMessages(prev => [
           ...prev, 
-          { id: Date.now().toString() + "1", role: "user", content: userText, parts: [{ type: "text", text: userText }] },
-          { id: Date.now().toString() + "2", role: "assistant", content: localActionContent, parts: [{ type: "text", text: localActionContent }] }
+          { id: Date.now().toString() + "1", role: "user", parts: [{ type: "text", text: userText }] } as any,
+          { id: Date.now().toString() + "2", role: "assistant", parts: [{ type: "text", text: localActionContent }] } as any
         ]);
       }
       return;
