@@ -99,6 +99,7 @@ export default function OceanBackground() {
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
+        if (!p) continue;
 
         // Mouse interaction
         const dx = p.x - mouse.x;
