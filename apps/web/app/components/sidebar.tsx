@@ -30,7 +30,7 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
 
   return (
     <div 
-      className={`relative h-[calc(100vh-40px)] m-[20px] flex flex-col rounded-[24px] overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] shrink-0 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] bg-white/80 dark:bg-[#18181b]/80 backdrop-blur-2xl border border-zinc-200 dark:border-zinc-800`}
+      className={`relative h-[calc(100vh-40px)] my-[20px] ml-[20px] flex flex-col rounded-[32px] overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] shrink-0 shadow-sm bg-white/60 dark:bg-zinc-900/60 backdrop-blur-3xl border border-white/50 dark:border-white/5`}
       style={{
         width: collapsed ? "72px" : "280px"
       }}
@@ -46,29 +46,19 @@ export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, 
 
         <button
           onClick={onNewThread}
-          className={`flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors text-zinc-800 dark:text-zinc-100 mt-2 ${collapsed ? "justify-center" : "justify-start"}`}
+          className={`flex items-center gap-3 px-4 py-3.5 bg-indigo-50/80 hover:bg-indigo-100/80 border border-indigo-100/50 dark:bg-indigo-500/20 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 rounded-full hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm mt-4 mx-2 ${collapsed ? "justify-center" : "justify-start"}`}
           title="New Chat"
         >
-          <div className="w-8 h-8 rounded-[10px] bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
-            <Plus className="w-4 h-4" />
+          <div className="flex items-center justify-center shrink-0">
+            <Plus className="w-5 h-5" />
           </div>
-          {!collapsed && <span className="font-medium tracking-wide">New Chat</span>}
-        </button>
-        
-        <button
-          className={`flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors text-zinc-800 dark:text-zinc-100 ${collapsed ? "justify-center" : "justify-start"}`}
-          title="Search"
-        >
-          <div className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0 text-zinc-500">
-            <Search className="w-4 h-4" />
-          </div>
-          {!collapsed && <span className="font-medium tracking-wide">Search</span>}
+          {!collapsed && <span className="font-semibold text-sm tracking-tight">New Chat</span>}
         </button>
       </div>
       
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 scrollbar-hide mt-4">
         {!collapsed && (
-          <div className="px-2 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-widest mt-2">
+          <div className="px-3 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-[0.1em] mt-2 mb-1">
             Recent Chats
           </div>
         )}
