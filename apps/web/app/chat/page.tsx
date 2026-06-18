@@ -184,7 +184,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-screen flex bg-[#09090b] text-zinc-100 font-sans selection:bg-white/20">
+    <div className="h-screen flex bg-background text-foreground font-sans overflow-hidden selection:bg-primary/20">
       <Sidebar
         threads={threads}
         activeThreadId={activeThreadId}
@@ -192,12 +192,9 @@ export default function ChatPage() {
         onNewThread={handleNewThread}
         onDeleteThread={handleDeleteThread}
       />
-      <div className="flex-1 flex flex-col relative h-full">
-        {/* Subtle background glow effect */}
-        <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
-        
+      <div className="flex-1 flex flex-col relative h-full w-full">
         {activeThreadId ? (
-          <div className="flex-1 flex flex-col w-full max-w-4xl mx-auto h-full relative z-10">
+          <div className="flex-1 flex flex-col w-full h-full relative z-10">
             <MessageView
               messages={messages}
               toolCalls={toolCalls}
@@ -206,26 +203,32 @@ export default function ChatPage() {
               loading={loading}
               agentStatus={agentStatus}
             />
-            <Composer onSend={handleSend} disabled={loading} />
+            <div className="w-full relative z-20">
+              {/* Optional: Add a subtle fade gradient if you want the messages to fade behind the composer */}
+              <div className="absolute bottom-full left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+              <div className="bg-background w-full pb-4 pt-2">
+                <Composer onSend={handleSend} disabled={loading} />
+              </div>
+            </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center z-10">
-            <div className="text-center space-y-6">
-              <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-2xl ring-1 ring-white/10">
-                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+          <div className="flex-1 flex items-center justify-center z-10 w-full px-4">
+            <div className="text-center w-full max-w-[800px] relative -mt-20">
+              <div className="relative mb-8 flex justify-center">
+                {/* 3D Glass Orb */}
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-200 via-blue-300 to-purple-400 opacity-90 shadow-[inset_-4px_-4px_10px_rgba(255,255,255,0.6),inset_4px_4px_10px_rgba(0,0,0,0.1),0_10px_20px_rgba(99,102,241,0.2)] animate-[pulse_6s_ease-in-out_infinite]" />
+                {/* Subtle glow behind it */}
+                <div className="w-24 h-24 rounded-full bg-indigo-400 blur-3xl opacity-20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
               </div>
-              <h2 className="text-2xl font-medium tracking-tight">Ready to assist</h2>
-              <p className="text-zinc-400 text-sm max-w-sm mx-auto leading-relaxed">
-                Start a new conversation to begin managing your workflow at inhumane speed.
+              <h2 className="text-[32px] font-semibold tracking-tight text-zinc-800 dark:text-zinc-100 mb-1">
+                Good Morning, {session?.user?.name?.split(' ')[0] || "Jaani"}
+              </h2>
+              <p className="text-[28px] font-medium mb-12 text-zinc-800 dark:text-zinc-100">
+                How Can I <span className="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Assist You Today?</span>
               </p>
-              <button
-                onClick={handleNewThread}
-                className="mt-4 px-6 py-2.5 bg-white text-black hover:bg-zinc-200 rounded-full text-sm font-medium transition-all shadow-lg shadow-white/5 hover:scale-105 active:scale-95"
-              >
-                Start New Thread
-              </button>
+              <div className="max-w-3xl mx-auto relative z-20">
+                <Composer onSend={handleSend} disabled={loading} isInitial={true} />
+              </div>
             </div>
           </div>
         )}

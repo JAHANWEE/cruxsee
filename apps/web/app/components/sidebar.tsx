@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { Thread } from "../chat/page";
-import { Plus, MessageSquare, Trash2, LogOut } from "lucide-react";
+import { Plus, MessageSquare, Search, LogOut, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Trash2 } from "lucide-react";
 import { signOut, useSession } from "~/lib/auth-client";
 
 interface SidebarProps {
@@ -14,82 +15,135 @@ interface SidebarProps {
 
 export function Sidebar({ threads, activeThreadId, onSelectThread, onNewThread, onDeleteThread }: SidebarProps) {
   const { data: session } = useSession();
+  const [collapsed, setCollapsed] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.thread-menu-container')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
-    <div className="w-[280px] h-full flex flex-col bg-[#09090b] border-r border-white/5">
-      <div className="p-4">
+    <div 
+      className={`relative h-[calc(100vh-40px)] m-[20px] flex flex-col rounded-[24px] overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] shrink-0 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] bg-white/80 dark:bg-[#18181b]/80 backdrop-blur-2xl border border-zinc-200 dark:border-zinc-800`}
+      style={{
+        width: collapsed ? "72px" : "280px"
+      }}
+    >
+      <div className="p-4 flex flex-col gap-2 mt-2">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 ml-auto"
+          title="Toggle Sidebar"
+        >
+          {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+        </button>
+
         <button
           onClick={onNewThread}
-          className="w-full flex items-center justify-between px-4 py-3 bg-[#18181b] hover:bg-[#27272a] border border-white/5 text-zinc-100 rounded-xl transition-all shadow-sm group"
+          className={`flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors text-zinc-800 dark:text-zinc-100 mt-2 ${collapsed ? "justify-center" : "justify-start"}`}
+          title="New Chat"
         >
-          <span className="text-sm font-medium tracking-wide">New Chat</span>
-          <div className="bg-white/10 p-1 rounded-md group-hover:bg-white/20 transition-colors">
-            <Plus className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-[10px] bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0">
+            <Plus className="w-4 h-4" />
           </div>
+          {!collapsed && <span className="font-medium tracking-wide">New Chat</span>}
+        </button>
+        
+        <button
+          className={`flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors text-zinc-800 dark:text-zinc-100 ${collapsed ? "justify-center" : "justify-start"}`}
+          title="Search"
+        >
+          <div className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0 text-zinc-500">
+            <Search className="w-4 h-4" />
+          </div>
+          {!collapsed && <span className="font-medium tracking-wide">Search</span>}
         </button>
       </div>
       
-      <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1 scrollbar-hide">
-        <div className="px-3 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-widest">
-          Recent
-        </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 scrollbar-hide mt-4">
+        {!collapsed && (
+          <div className="px-2 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-widest mt-2">
+            Recent Chats
+          </div>
+        )}
         {threads.map((thread) => (
           <div
             key={thread.id}
-            onClick={() => onSelectThread(thread.id)}
-            className={`w-full flex items-center justify-between px-3 py-3 text-sm rounded-xl transition-all group cursor-pointer ${
+            className={`group relative w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-all ${
               activeThreadId === thread.id
-                ? "bg-[#18181b] text-white shadow-sm ring-1 ring-white/5"
-                : "text-zinc-400 hover:bg-[#18181b]/50 hover:text-zinc-200"
-            }`}
+                ? "bg-zinc-100 dark:bg-white/10 text-zinc-900 dark:text-zinc-100 font-medium"
+                : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-800 dark:hover:text-zinc-200"
+            } ${collapsed ? "justify-center" : "justify-start"}`}
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <MessageSquare className={`w-4 h-4 flex-shrink-0 transition-colors ${activeThreadId === thread.id ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"}`} />
-              <span className="truncate text-left font-medium">{thread.title || "New Thread"}</span>
+            <div 
+              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+              onClick={() => onSelectThread(thread.id)}
+              title={thread.title || "New Thread"}
+            >
+              <MessageSquare className={`w-4 h-4 shrink-0 transition-colors ${activeThreadId === thread.id ? "text-indigo-500" : ""}`} />
+              {!collapsed && <span className="truncate flex-1 text-left">{thread.title || "New Thread"}</span>}
             </div>
-            {onDeleteThread && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteThread(thread.id);
-                }}
-                className={`flex-shrink-0 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/20 hover:text-red-400 ${activeThreadId === thread.id ? "text-zinc-400" : "text-zinc-500"}`}
-                title="Delete thread"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+
+            {!collapsed && onDeleteThread && (
+              <div className="relative shrink-0 thread-menu-container">
+                <button
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setOpenMenuId(openMenuId === thread.id ? null : thread.id); 
+                  }}
+                  className={`p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors ${openMenuId === thread.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+                
+                {openMenuId === thread.id && (
+                  <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg p-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <button
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        onDeleteThread(thread.id); 
+                        setOpenMenuId(null); 
+                      }}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ))}
-        {threads.length === 0 && (
-          <div className="px-3 py-8 text-center">
-            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3">
-              <MessageSquare className="w-4 h-4 text-zinc-500" />
-            </div>
-            <p className="text-xs text-zinc-500 font-medium">No history yet</p>
-          </div>
-        )}
       </div>
       
-      {/* User profile + logout */}
-      <div className="p-4 border-t border-white/5">
-        <div className="flex items-center gap-3 px-3 py-2">
+      {/* User profile */}
+      <div className="p-4 mt-auto border-t border-zinc-100 dark:border-zinc-800/50">
+        <div className={`flex items-center gap-3 px-2 py-2 ${collapsed ? "justify-center" : ""}`}>
           {session?.user?.image ? (
-            <img src={session.user.image} alt="" className="w-8 h-8 rounded-full flex-shrink-0" />
+            <img src={session.user.image} alt="" className="w-8 h-8 rounded-full shrink-0 shadow-sm" />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-zinc-700 to-zinc-500 flex-shrink-0" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-400 to-purple-400 shrink-0 shadow-sm" />
           )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-zinc-200 truncate">{session?.user?.name || "User"}</p>
-            <p className="text-xs text-zinc-500 truncate">{session?.user?.email}</p>
-          </div>
-          <button
-            onClick={() => signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/"; } } })}
-            className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-colors"
-            title="Sign out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          {!collapsed && (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100 truncate">{session?.user?.name || "User"}</p>
+              </div>
+              <button
+                onClick={() => signOut({ fetchOptions: { onSuccess: () => { window.location.href = "/"; } } })}
+                className="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-400 hover:text-red-500 transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

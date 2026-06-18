@@ -1,16 +1,35 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { ArrowUp } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { ArrowUp, Paperclip, Sparkles, Mail, Calendar } from "lucide-react";
 
 interface ComposerProps {
   onSend: (content: string) => void;
   disabled: boolean;
+  isInitial?: boolean;
 }
 
-export function Composer({ onSend, disabled }: ComposerProps) {
+const PLACEHOLDERS = [
+  "Initiate a query or send a command to the AI...",
+  "Ask Cruxsee anything...",
+  "Summarize my emails...",
+  "Review latest PRs...",
+  "Schedule a meeting..."
+];
+
+export function Composer({ onSend, disabled, isInitial }: ComposerProps) {
   const [value, setValue] = useState("");
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % PLACEHOLDERS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = useCallback(() => {
     if (!value.trim() || disabled) return;
@@ -32,35 +51,72 @@ export function Composer({ onSend, disabled }: ComposerProps) {
     setValue(e.target.value);
     const el = e.target;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 250) + "px";
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";
   };
 
   return (
-    <div className="w-full px-4 pb-6 pt-2">
-      <div className="relative flex items-end w-full max-w-3xl mx-auto bg-[#18181b] rounded-3xl shadow-lg ring-1 ring-white/10 focus-within:ring-white/20 transition-all overflow-hidden backdrop-blur-sm">
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleInput}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask Cruxsee anything..."
-          disabled={disabled}
-          rows={1}
-          className="flex-1 max-h-[250px] resize-none bg-transparent px-5 py-4 text-[15px] leading-relaxed outline-none text-zinc-100 placeholder:text-zinc-500 disabled:opacity-50 scrollbar-hide"
-        />
-        <div className="p-2 pl-0">
+    <div className={`w-full max-w-[800px] mx-auto ${isInitial ? "pb-0" : "px-4 pb-8"}`}>
+      <div 
+        className={`relative flex flex-col w-full bg-white dark:bg-[#18181b] rounded-[24px] transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.3)] border ${
+          isFocused ? "border-indigo-500/30 shadow-[0_8px_30px_rgba(99,102,241,0.08)]" : "border-zinc-100 dark:border-zinc-800"
+        }`}
+      >
+        <div className="flex items-start px-5 pt-5 pb-2 relative">
+          {!value && (
+            <div className="absolute left-6 top-[22px] pointer-events-none text-indigo-400">
+              <Sparkles className="w-4 h-4" />
+            </div>
+          )}
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleInput}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => {
+              setIsFocused(false);
+              setTimeout(() => { setShowPlusMenu(false); }, 150);
+            }}
+            placeholder={PLACEHOLDERS[placeholderIndex]}
+            disabled={disabled}
+            rows={1}
+            className={`flex-1 max-h-[200px] resize-none bg-transparent ${value ? "pl-1" : "pl-7"} text-[15px] leading-[1.65] outline-none text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 disabled:opacity-50 scrollbar-hide transition-all`}
+          />
+        </div>
+        
+        <div className="flex items-center justify-between px-4 pb-4 mt-2">
+          <div className="flex items-center gap-2 relative">
+            {/* Attachment Button & Menu */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowPlusMenu(!showPlusMenu)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
+              {showPlusMenu && (
+                <div className="absolute bottom-full left-0 mb-2 w-48 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl p-2 animate-in fade-in slide-in-from-bottom-2 duration-200 z-50">
+                  <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors">
+                    <Mail className="w-4 h-4 text-indigo-500" /> Gmail
+                  </button>
+                  <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors">
+                    <Calendar className="w-4 h-4 text-indigo-500" /> Google Calendar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           <button
             onClick={handleSubmit}
             disabled={disabled || !value.trim()}
-            className="flex items-center justify-center w-9 h-9 bg-white text-black rounded-full disabled:opacity-20 disabled:bg-white/20 disabled:text-white hover:bg-zinc-200 transition-all active:scale-95"
+            className="flex items-center justify-center w-10 h-10 bg-indigo-500 text-white rounded-[14px] disabled:opacity-30 disabled:bg-indigo-500/50 transition-all hover:scale-105 active:scale-95 shadow-md"
           >
-            <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+            <ArrowUp className="w-5 h-5 stroke-[2.5]" />
           </button>
         </div>
       </div>
-      <p className="text-center text-[11px] font-medium tracking-wide text-zinc-500 mt-3 uppercase">
-        Cruxsee executes real actions. Review tool calls carefully.
-      </p>
     </div>
   );
 }
