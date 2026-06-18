@@ -3,9 +3,18 @@ import { corsair } from "@repo/corsair";
 import { auth } from "@repo/auth";
 import { fromNodeHeaders } from "better-auth/node";
 import { cache } from "../cache";
+import { logger } from "@repo/logger";
 import { z } from "zod";
 
 export const calendarRouter = Router();
+
+// Timezone helpers — convert to UTC for Google Calendar API
+function toUTCISO(dt: string): string {
+  // If already full ISO with Z, return as-is
+  if (dt.endsWith("Z")) return dt;
+  // Convert to UTC via Date object
+  return new Date(dt).toISOString();
+}
 
 const getEventsSchema = z.object({
   timeMin: z.string(),
@@ -97,22 +106,24 @@ calendarRouter.post("/events", async (req, res) => {
       }
     }
 
-    // Normalize start/end — Google Calendar needs { dateTime: "full ISO string with timezone" }
+    // Normalize start/end — convert to UTC ISO (Google Calendar displays in user's cal timezone)
     if (typeof eventData.start === "string") {
-      eventData.start = { dateTime: new Date(eventData.start).toISOString() };
-    } else if (eventData.start?.dateTime && !eventData.start.dateTime.includes("Z") && !eventData.start.dateTime.match(/[+-]\d{2}:\d{2}$/)) {
-      eventData.start = { dateTime: new Date(eventData.start.dateTime).toISOString() };
+      eventData.start = { dateTime: toUTCISO(eventData.start) };
+    } else if (eventData.start?.dateTime) {
+      eventData.start = { dateTime: toUTCISO(eventData.start.dateTime) };
     }
     if (typeof eventData.end === "string") {
-      eventData.end = { dateTime: new Date(eventData.end).toISOString() };
-    } else if (eventData.end?.dateTime && !eventData.end.dateTime.includes("Z") && !eventData.end.dateTime.match(/[+-]\d{2}:\d{2}$/)) {
-      eventData.end = { dateTime: new Date(eventData.end.dateTime).toISOString() };
+      eventData.end = { dateTime: toUTCISO(eventData.end) };
+    } else if (eventData.end?.dateTime) {
+      eventData.end = { dateTime: toUTCISO(eventData.end.dateTime) };
     }
 
+    logger.info("[calendar:create] sending to corsair", { eventData: JSON.stringify(eventData) });
     const event = await tenant.googlecalendar.api.events.create({ event: eventData });
     await cache.delPattern(`cal:${session.user.id}:*`);
     res.json(event);
   } catch (err: any) {
+    logger.error("[calendar:create] failed", { error: err.message, body: req.body });
     res.status(500).json({ error: err.message });
   }
 });
@@ -162,16 +173,16 @@ calendarRouter.put("/events/:id", async (req, res) => {
       }
     }
 
-    // Normalize start/end
+    // Normalize start/end — convert to UTC ISO
     if (typeof eventData.start === "string") {
-      eventData.start = { dateTime: new Date(eventData.start).toISOString() };
-    } else if (eventData.start?.dateTime && !eventData.start.dateTime.includes("Z") && !eventData.start.dateTime.match(/[+-]\d{2}:\d{2}$/)) {
-      eventData.start = { dateTime: new Date(eventData.start.dateTime).toISOString() };
+      eventData.start = { dateTime: toUTCISO(eventData.start) };
+    } else if (eventData.start?.dateTime) {
+      eventData.start = { dateTime: toUTCISO(eventData.start.dateTime) };
     }
     if (typeof eventData.end === "string") {
-      eventData.end = { dateTime: new Date(eventData.end).toISOString() };
-    } else if (eventData.end?.dateTime && !eventData.end.dateTime.includes("Z") && !eventData.end.dateTime.match(/[+-]\d{2}:\d{2}$/)) {
-      eventData.end = { dateTime: new Date(eventData.end.dateTime).toISOString() };
+      eventData.end = { dateTime: toUTCISO(eventData.end) };
+    } else if (eventData.end?.dateTime) {
+      eventData.end = { dateTime: toUTCISO(eventData.end.dateTime) };
     }
 
     const event = await tenant.googlecalendar.api.events.update({ id: req.params.id, event: eventData });

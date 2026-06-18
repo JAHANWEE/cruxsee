@@ -38,14 +38,16 @@ Labels:
 - GENERAL: anything else
 "sufficient" = does the conversation contain enough info to ACT?
 - For SEND_EMAIL: sufficient=true ONLY if recipient AND purpose/topic are both known from the conversation
-- For CALENDAR_CREATE: sufficient=true ONLY if event title AND date/time are known
+- For CALENDAR_CREATE: sufficient=true ONLY if event title AND date/time are EXPLICITLY mentioned (e.g. "today", "tomorrow", "June 20", "at 3pm"). If no date or time is mentioned at all, sufficient=false.
 - For READ/GREETING/ABOUT/GENERAL: always sufficient=true
 Output only the JSON. No explanation.`;
 
 const FAST_PROMPT = `You are Cruxsee — a blazing-fast AI operator for email and calendar.
+Today's date is ${new Date().toISOString().split("T")[0]}.
 Keep responses SHORT (1-2 sentences max). Be direct, warm, confident.
 If user asks what you can do: "I can send emails, read your inbox, manage your calendar — all through chat. Just tell me what you need."
 If user wants to send email but hasn't said who/what: ask BOTH in one short question.
+If user wants to create a calendar event but hasn't said when: ask "When should I schedule it?" in one short question.
 If user says "yes"/"send it"/"do it" to confirm an action: respond with "Done."`;
 
 const WRITER_PROMPT = `You are Cruxsee — a world-class email copywriter.
@@ -60,17 +62,22 @@ Rules:
 {"to":"email@example.com","subject":"Subject line","body":"Full email body here"}
 \`\`\``;
 
-const CALENDAR_PROMPT = `You are Cruxsee — a calendar scheduling assistant.
+const CALENDAR_PROMPT = () => {
+  const today = new Date().toISOString().split("T")[0]; // "2026-06-18"
+  return `You are Cruxsee — a calendar scheduling assistant.
 Given the conversation context, create the calendar event NOW. Do not ask questions — you have enough info.
 Rules:
+- Today's date is ${today}. Use this as reference for "today", "tomorrow", etc.
 - Parse the date/time from conversation. If no time given, default to 10:00 AM, 1 hour duration.
-- If no date given, assume today or next occurrence of the day mentioned.
-- Use ISO 8601 format for start/end times.
+- If no date given, use today: ${today}.
+- If user says "tomorrow", use the day after ${today}.
+- Use ISO 8601 format for start/end times (e.g. ${today}T10:00:00).
 - Output ONLY the action block, no other text before or after:
 
 \`\`\`calendar-action
-{"summary":"Event title","start":"2026-06-18T10:00:00","end":"2026-06-18T11:00:00","description":"Optional description","guests":["email@example.com"]}
+{"summary":"Event title","start":"${today}T10:00:00","end":"${today}T11:00:00","description":"Optional description","guests":["email@example.com"]}
 \`\`\``;
+};
 
 const TOOL_PROMPT = `You are Cruxsee. Use run_script to execute operations. Be brief with results.
 
@@ -249,7 +256,7 @@ chatRouter.post("/", async (req, res) => {
     if (intent === "CALENDAR_CREATE") {
       const result = streamText({
         model: writer("gpt-4.1-mini"),
-        system: CALENDAR_PROMPT,
+        system: CALENDAR_PROMPT(),
         messages: modelMessages,
       });
       await streamToResponse(result, res, threadId);

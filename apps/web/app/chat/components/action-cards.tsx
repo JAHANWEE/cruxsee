@@ -134,7 +134,7 @@ export function CalendarActionCard({ data }: { data: CalendarData }) {
     setCreating(true);
     setError("");
     try {
-      // Ensure proper ISO format with timezone (Google Calendar requires it)
+      // Convert to UTC ISO string — Google Calendar will display in user's calendar timezone
       const startISO = new Date(start).toISOString();
       const endISO = new Date(end).toISOString();
 
