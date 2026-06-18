@@ -196,7 +196,7 @@ function MessageBubble({
           remarkPlugins={[remarkGfm]}
           components={{
             code({ node, inline, className, children, ...props }: any) {
-              const match = /language-(\w+)/.exec(className || "");
+              const match = /language-([\w-]+)/.exec(className || "");
               const isEmailDraft = match && match[1] === "email-draft";
               
               if (!inline && isEmailDraft) {
