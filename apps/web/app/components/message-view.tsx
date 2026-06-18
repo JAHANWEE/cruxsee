@@ -40,8 +40,14 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, onEdit, 
   const hasPendingTools = pendingToolCalls.length > 0;
   const activeToolCall = pendingToolCalls[0];
 
-  const isEmailSendCall = activeToolCall?.toolName === "run_script" && String((activeToolCall.input as any)?.code || "").includes("gmail.api.messages.send");
-  const isEmailDraftPending = isEmailSendCall && messages.some(m => m.content?.includes("```email-draft"));
+  // Detect email send from the tool call code itself
+  const activeCode = activeToolCall?.toolName === "run_script" ? String((activeToolCall.input as any)?.code || "") : "";
+  const isEmailSendCall = activeCode.includes("gmail.api.messages.send");
+  const isCalendarCreateCall = activeCode.includes("googlecalendar.api.events.create");
+  
+  // Extract email details from run_script code
+  const emailDraftFromCode = isEmailSendCall ? parseEmailFromCode(activeCode) : null;
+  const calendarEventFromCode = isCalendarCreateCall ? parseCalendarFromCode(activeCode) : null;
 
   return (
     <div 
@@ -80,42 +86,68 @@ export function MessageView({ messages, toolCalls, onApprove, onReject, onEdit, 
         </div>
       )}
 
-      {/* Global Tool Approval (if not attached to a message draft) */}
-      {hasPendingTools && activeToolCall && !isEmailDraftPending && (
-        <div className="w-full max-w-[760px] mx-auto bg-glass-bg backdrop-blur-[40px] rounded-[28px] p-6 border border-orange-500/50 shadow-[0_0_20px_rgba(249,115,22,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <Cpu className="w-4 h-4" />
+      {/* Smart Tool Approval Cards */}
+      {hasPendingTools && activeToolCall && (
+        <>
+          {emailDraftFromCode ? (
+            <div className="w-full max-w-[760px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <EmailDraftCardInline
+                draft={emailDraftFromCode}
+                onSend={(edited) => {
+                  // Rebuild the code with user's edits
+                  const newCode = `await corsair.withTenant("${activeCode.match(/withTenant\(['"]([^'"]+)['"]\)/)?.[1] || ""}").gmail.api.messages.send({ message: { to: "${edited.to}", subject: "${edited.subject.replace(/"/g, '\\"')}", body: "${edited.body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}" } });`;
+                  onApprove(activeToolCall.id, { code: newCode });
+                }}
+                onDiscard={() => onReject(activeToolCall.id)}
+                disabled={loading}
+              />
+            </div>
+          ) : calendarEventFromCode ? (
+            <div className="w-full max-w-[760px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <CalendarEventCardInline
+                event={calendarEventFromCode}
+                onConfirm={() => onApprove(activeToolCall.id)}
+                onCancel={() => onReject(activeToolCall.id)}
+                disabled={loading}
+              />
+            </div>
+          ) : (
+            <div className="w-full max-w-[760px] mx-auto bg-glass-bg backdrop-blur-[40px] rounded-[28px] p-6 border border-orange-500/50 shadow-[0_0_20px_rgba(249,115,22,0.15)] animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <Cpu className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-foreground font-medium text-[15px]">Action Required</h3>
+                    <p className="text-secondary text-sm">Cruxsee wants to perform an action on your behalf.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onApprove(activeToolCall.id)}
+                    disabled={loading}
+                    className="px-4 py-2 bg-primary text-primary-foreground font-medium text-sm rounded-full transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => onReject(activeToolCall.id)}
+                    disabled={loading}
+                    className="px-4 py-2 bg-black/5 dark:bg-white/5 text-foreground hover:bg-black/10 dark:hover:bg-white/10 font-medium text-sm rounded-full transition-colors disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                </div>
               </div>
-              <div>
-                <h3 className="text-foreground font-medium text-[15px]">Action Required</h3>
-                <p className="text-secondary text-sm">Cruxsee wants to use a tool on your behalf.</p>
+              <div className="mt-4 bg-[#0F1115] rounded-xl p-4 overflow-x-auto border border-white/5">
+                <pre className="text-[11px] text-[#A1A1AA] font-mono leading-relaxed">
+                  {JSON.stringify(activeToolCall.input, null, 2)}
+                </pre>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onApprove(activeToolCall.id)}
-                disabled={loading}
-                className="px-4 py-2 bg-primary text-primary-foreground font-medium text-sm rounded-full transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-              >
-                Approve
-              </button>
-              <button
-                onClick={() => onReject(activeToolCall.id)}
-                disabled={loading}
-                className="px-4 py-2 bg-black/5 dark:bg-white/5 text-foreground hover:bg-black/10 dark:hover:bg-white/10 font-medium text-sm rounded-full transition-colors disabled:opacity-50"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-          <div className="mt-4 bg-[#0F1115] rounded-xl p-4 overflow-x-auto border border-white/5">
-             <pre className="text-[11px] text-[#A1A1AA] font-mono leading-relaxed">
-               {JSON.stringify(activeToolCall.input, null, 2)}
-             </pre>
-          </div>
-        </div>
+          )}
+        </>
       )}
 
       <div ref={bottomRef} className="h-4" />
@@ -399,6 +431,136 @@ function MessageBubble({
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Helpers: parse email/calendar from run_script code ────────────────────
+
+function parseEmailFromCode(code: string): { to: string; subject: string; body: string } | null {
+  try {
+    // Match patterns like: to: 'email', subject: 'sub', body: 'body'
+    const toMatch = code.match(/to:\s*['"]([^'"]+)['"]/);
+    const subjectMatch = code.match(/subject:\s*['"]([^'"]+)['"]/);
+    const bodyMatch = code.match(/body:\s*['"]([^'"]*)['"]/);
+    
+    if (toMatch) {
+      return {
+        to: toMatch[1] || "",
+        subject: subjectMatch?.[1] || "",
+        body: (bodyMatch?.[1] || "").replace(/\\n/g, "\n").replace(/\\"/g, '"'),
+      };
+    }
+  } catch {}
+  return null;
+}
+
+function parseCalendarFromCode(code: string): { summary: string; startDateTime: string; endDateTime: string } | null {
+  try {
+    const summaryMatch = code.match(/summary:\s*['"]([^'"]+)['"]/);
+    const startMatch = code.match(/dateTime:\s*['"]([^'"]+)['"]/);
+    // Find second dateTime (end)
+    const allDateTimes = [...code.matchAll(/dateTime:\s*['"]([^'"]+)['"]/g)];
+    
+    if (summaryMatch) {
+      return {
+        summary: summaryMatch[1] || "",
+        startDateTime: allDateTimes[0]?.[1] || "",
+        endDateTime: allDateTimes[1]?.[1] || allDateTimes[0]?.[1] || "",
+      };
+    }
+  } catch {}
+  return null;
+}
+
+// ─── Inline Email Draft Card (renders from parsed code) ───────────────────
+
+function EmailDraftCardInline({ 
+  draft, 
+  onSend, 
+  onDiscard, 
+  disabled 
+}: { 
+  draft: { to: string; subject: string; body: string };
+  onSend: (data: { to: string; subject: string; body: string }) => void;
+  onDiscard: () => void;
+  disabled: boolean;
+}) {
+  const [form, setForm] = useState(draft);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (bodyRef.current) {
+      bodyRef.current.style.height = "auto";
+      bodyRef.current.style.height = bodyRef.current.scrollHeight + "px";
+    }
+  }, [form.body]);
+
+  return (
+    <div className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#1a1a1d] shadow-lg overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200">New Message</span>
+        <button onClick={onDiscard} disabled={disabled} className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="flex items-center border-b border-zinc-100 dark:border-zinc-800 px-4 py-2">
+        <span className="text-sm text-zinc-400 w-16 flex-shrink-0">To</span>
+        <input type="email" value={form.to} onChange={(e) => setForm(f => ({ ...f, to: e.target.value }))} disabled={disabled} className="flex-1 text-sm bg-transparent outline-none text-zinc-900 dark:text-zinc-100" placeholder="recipient@email.com" />
+      </div>
+      <div className="flex items-center border-b border-zinc-100 dark:border-zinc-800 px-4 py-2">
+        <span className="text-sm text-zinc-400 w-16 flex-shrink-0">Subject</span>
+        <input type="text" value={form.subject} onChange={(e) => setForm(f => ({ ...f, subject: e.target.value }))} disabled={disabled} className="flex-1 text-sm bg-transparent outline-none text-zinc-900 dark:text-zinc-100" placeholder="Subject" />
+      </div>
+      <div className="px-4 py-3 min-h-[120px]">
+        <textarea ref={bodyRef} value={form.body} onChange={(e) => setForm(f => ({ ...f, body: e.target.value }))} disabled={disabled} rows={4} className="w-full text-sm bg-transparent outline-none resize-none text-zinc-900 dark:text-zinc-100 leading-relaxed" placeholder="Compose email..." />
+      </div>
+      <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30">
+        <button onClick={() => onSend(form)} disabled={disabled || !form.to.trim() || !form.body.trim()} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40">
+          Send
+        </button>
+        <button onClick={onDiscard} disabled={disabled} className="px-3 py-2 text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+          Discard
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Inline Calendar Event Card ───────────────────────────────────────────
+
+function CalendarEventCardInline({
+  event,
+  onConfirm,
+  onCancel,
+  disabled,
+}: {
+  event: { summary: string; startDateTime: string; endDateTime: string };
+  onConfirm: () => void;
+  onCancel: () => void;
+  disabled: boolean;
+}) {
+  const formatDT = (iso: string) => {
+    try { return new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
+    catch { return iso; }
+  };
+
+  return (
+    <div className="w-full max-w-[500px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#1a1a1d] shadow-lg overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-indigo-50 dark:bg-indigo-950/30 border-b border-zinc-200 dark:border-zinc-700">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-200">📅 New Event</span>
+        <button onClick={onCancel} disabled={disabled} className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="p-4 space-y-2">
+        <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">{event.summary}</p>
+        <p className="text-sm text-zinc-500">{formatDT(event.startDateTime)} — {formatDT(event.endDateTime)}</p>
+      </div>
+      <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30">
+        <button onClick={onCancel} disabled={disabled} className="px-3 py-2 text-sm text-zinc-500 hover:text-zinc-700 transition-colors">Cancel</button>
+        <button onClick={onConfirm} disabled={disabled} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40">Create Event</button>
       </div>
     </div>
   );
